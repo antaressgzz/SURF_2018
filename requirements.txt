@@ -1,0 +1,20 @@
+# data
+# rl
+gym==0.9.3
+tensorflow==1.4.0
+h5py==2.7.0
+# numbers
+tables==3.4.2
+seaborn==0.8
+numpy==1.13.3
+matplotlib==2.0.2
+# misc
+tqdm==4.19.2
+seaborn==0.8
+statsmodels==0.8.0
+# OLPS
+pandas==0.22.0
+cvxopt
+scipy
+pandas-datareader
+scikit-learn
