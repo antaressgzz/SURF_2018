@@ -1,4 +1,3 @@
-# data
 # rl
 gym==0.9.3
 tensorflow==1.4.0
