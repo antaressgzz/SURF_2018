@@ -8,13 +8,17 @@ import numpy as np
 
 
 class Coordinator:
-    def __init__(self, agent, env, total_training_step, replay_period):
+    def __init__(self, agent, env):
         self.agent = agent
         self.env = env
+
+    def train(self, total_training_step, replay_period, tensorboard=False):
+
+        if tensorboard == True:
+            self.agent.initialize_tb()
+
         self.total_training_step = total_training_step
         self.replay_period = replay_period
-
-    def train(self):
 
         training_step = 0
 

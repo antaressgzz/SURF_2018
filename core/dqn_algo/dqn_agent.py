@@ -32,6 +32,7 @@ class Dqn_agent:
         self.global_step = tf.Variable(0, trainable=False)
         self.lr = tf.train.exponential_decay(learning_rate=0.01, global_step=self.global_step,
                                              decay_steps=learning_rate_decay_step, decay_rate=0.9)
+        # self.lr = 0.001
         self.action_num, self.actions = action_discretization(self.asset_num, self.division)
         
         config = tf.ConfigProto()
@@ -46,16 +47,18 @@ class Dqn_agent:
         self.initialize_graph(network_topology)
         self.sess.run(tf.global_variables_initializer())
 
-        if tensorboard == True:
-            # tensorboard --logdir=logs/train/name
-            for v in tf.trainable_variables():
-                tf.summary.histogram(v.name, v)
-            self.merged = tf.summary.merge_all()
-            self.writer = tf.summary.FileWriter("logs/train/" + self.name, self.sess.graph)
-            self.tensorboard = True
-            self.log_freq = log_freq
-        else:
-            self.tensorboard = False
+        # if tensorboard == True:
+        #     # tensorboard --logdir=logs/train/name
+        #     for v in tf.trainable_variables():
+        #         tf.summary.histogram(v.name, v)
+        #     self.merged = tf.summary.merge_all()
+        #     self.writer = tf.summary.FileWriter("logs/train/" + self.name, self.sess.graph)
+        #     self.tensorboard = True
+        #     self.log_freq = log_freq
+        # else:
+        #     self.tensorboard = False
+
+        self.log_freq = log_freq
 
         if save == True:
             self.save = save
@@ -86,19 +89,19 @@ class Dqn_agent:
 
         # Training network
         with tf.variable_scope('training_network'):
-            self.training_output, self.training_collection = g_b.build_graph(self.price_his, self.addi_inputs, 'training_network')
+            self.training_output, self.training_collection = g_b.build_graph(self.price_his, self.addi_inputs, 'training')
             tf.summary.histogram('action_values', self.training_output)
 
         # Target network
         with tf.variable_scope('target_network'):
-            self.target_output, self.target_collection = g_b.build_graph(self.price_his_, self.addi_inputs, 'target_network')
+            self.target_output, self.target_collection = g_b.build_graph(self.price_his_, self.addi_inputs, 'target')
 
         with tf.name_scope('loss'):
             self.loss = self.action_num * tf.reduce_mean(tf.squared_difference(self.targets, self.training_output))
             tf.summary.scalar('loss', self.loss)
 
         with tf.name_scope('train'):
-            self.train = tf.train.AdamOptimizer().minimize(self.loss, global_step=self.global_step)
+            self.train = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(self.loss, global_step=self.global_step)
 
         with tf.name_scope('update_target'):
             training_params = tf.get_collection('training_params')
@@ -108,6 +111,13 @@ class Dqn_agent:
         # self.grad = []
         # for v in tf.trainable_variables():
         #     self.grad.append(tf.gradients(self.loss, [v]))
+
+    def initialize_tb(self):
+        for v in tf.trainable_variables():
+            tf.summary.histogram(v.name, v)
+        self.merged = tf.summary.merge_all()
+        self.writer = tf.summary.FileWriter("logs/train/" + self.name, self.sess.graph)
+        self.tensorboard = True
 
     def replay(self):
 
