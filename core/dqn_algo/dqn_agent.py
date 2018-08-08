@@ -109,23 +109,6 @@ class Dqn_agent:
         # for v in tf.trainable_variables():
         #     self.grad.append(tf.gradients(self.loss, [v]))
 
-    def _build_graph(self, inputs, name):
-
-        # Build graph
-        collection = [name + '_params', tf.GraphKeys.GLOBAL_VARIABLES]
-        fc_input = tf.concat([tf.layers.flatten(inputs), self.addi_inputs], axis=1)
-        h1 = layers.fully_connected(fc_input, num_outputs=self.action_num, activation_fn=tf.nn.selu,
-                                    trainable=True,
-                                    variables_collections=collection,
-                                    weights_initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.01),
-                                    scope='h1')
-        output = layers.fully_connected(h1, num_outputs=self.action_num, activation_fn=None, trainable=True,
-                                        variables_collections=collection,
-                                        weights_initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.01),
-                                        scope='output')
-
-        return output, collection
-
     def replay(self):
 
         obs, actions_idx, rewards, obs_ = self.memory.sample()
@@ -215,3 +198,17 @@ class Dqn_agent:
 
     def memory_cnt(self):
         return self.memory.memory_pointer
+
+    def network_state(self):
+        l = {}
+        for v in tf.trainable_variables():
+            print(v.name)
+            l[v.name] = self.sess.run(v)
+
+        return l
+
+    def action_values(self, o):
+        action_values = self.sess.run(self.training_output,
+                                      feed_dict={self.price_his: o['history'][np.newaxis, :, :, :],
+                                                 self.addi_inputs: o['weights'][np.newaxis, :]})
+        return action_values

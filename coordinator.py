@@ -4,7 +4,8 @@ current_path = os.path.abspath(__file__)
 OLPS_path = os.path.abspath(os.path.dirname(current_path) + os.path.sep + 'OLPS/OLPS_modified')
 sys.path.append(OLPS_path)
 from OLPS.olps import OLPS
-import os
+import numpy as np
+
 
 class Coordinator:
     def __init__(self, agent, env, total_training_step, replay_period):
@@ -42,6 +43,8 @@ class Coordinator:
         ob = env_test.reset()
 
         while True:
+            # ob['history'] = np.random.normal(size=(4, 50, 1))
+            # print(ob['history'][0][0][0])
             action_idx, action = self.agent.choose_action(ob, test=True)
             ob, reward, done, _ = env_test.step(action)
             if done:
@@ -63,5 +66,11 @@ class Coordinator:
 
     def restore(self, name):
         self.agent.restore(name)
+
+    def network_state(self):
+        return  self.agent.network_state()
+
+    def action_values(self, o):
+        return self.agent.action_values(o)
 
 
