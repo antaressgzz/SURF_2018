@@ -9,10 +9,10 @@ df_train = pd.read_hdf('./data/forex_30m_CLOSE_1.hf', key='train')
 df_test = pd.read_hdf('./data/forex_30m_CLOSE_1.hf', key='test')
 
 division = 1
-gamma = 0
+gamma = 0.9
 name = 'dqn-ha'
 save = False
-total_training_step = 50000
+total_training_step = 20000
 replay_period = 2
 save_period = total_training_step-1
 batch_size = 16
@@ -29,7 +29,7 @@ network_config = {
         'output_num': None,
         'output_activation': None,
         'weights_regularization': None,
-        'weights_initializer': tf.constant_initializer(0.005),
+        'weights_initializer': tf.truncated_normal_initializer(stddev=0.1), #tf.constant_initializer(0.005),
         'bias_regularization': tf.keras.regularizers.l2(l=0.1)
     }
 
@@ -42,6 +42,8 @@ agent = Dqn_agent(asset_num, division, feature_num, gamma,
                   log_freq=50, save_period=save_period, save=save,
                   name=name, GPU=GPU)
 
+coo = Coordinator(agent)
+
 env = PortfolioEnv(df_train,
                    steps=256,
                    trading_cost=0.00007,
@@ -49,21 +51,16 @@ env = PortfolioEnv(df_train,
                    scale=False,
                    random_reset=False)
 
-coo = Coordinator(agent, env)
-
 ob = env.reset()
 for i in range(5):
     print(coo.action_values(ob))
     ob, a, r, ob_ = env.step(np.ones(5))
 
-coo.train(total_training_step=total_training_step, replay_period=replay_period, tensorboard=True)
+
+coo.train(env, total_training_step=total_training_step, replay_period=replay_period, tensorboard=True)
 
 
-ob = env.reset()
-for i in range(10):
-    print(coo.action_values(ob))
-    print(np.argmax(coo.action_values(ob)))
-    ob, a, r, ob_ = env.step(np.ones(5))
+
 
 env_test = PortfolioEnv(df_train,
                         steps=2500,
@@ -71,9 +68,13 @@ env_test = PortfolioEnv(df_train,
                         window_length=window_length,
                         scale=False,
                         random_reset=False)
+ob = env_test.reset()
+for i in range(10):
+    print(coo.action_values(ob))
+    print(np.argmax(coo.action_values(ob)))
+    ob, a, r, ob_ = env.step(np.ones(5))
 
-
-# coo.restore('dqn-consini-199995')
+# coo.restore('')
 
 # l = coo.network_state()
 # print(l['training_network/output/weights:0'])
