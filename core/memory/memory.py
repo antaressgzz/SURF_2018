@@ -32,8 +32,8 @@ class Memory:
             actions_idx.append(self.memory_dict[idx][1])
             rewards.append(self.memory_dict[idx][2])
         ############# Test ##################
-        assert (observations['history'] != 0).all()
-        assert np.isclose(observations_['weights'][0], self.actions[actions_idx[0]]).all()
+        # assert (observations['history'] != 0).all()
+        # assert np.isclose(observations_['weights'][0], self.actions[actions_idx[0]]).all()
         # assert (observations_['weights'][0] == self.actions[actions_idx[0]]).all()
         return observations, actions_idx, rewards, observations_
 

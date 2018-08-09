@@ -12,18 +12,18 @@ division = 1
 gamma = 0.9
 name = 'dqn-aaa'
 save = False
-total_training_step = 20000
+total_training_step = 150000
 replay_period = 2
 save_period = total_training_step-1
 batch_size = 16
 GPU = False
 asset_num = 5
 feature_num = 1
-window_length = 50
+window_length = 100
 
 # network_config = {
 #         'type': 'fc',
-#         'fc_layer': [100, 100],
+#         'fc_layer': [50, 50],
 #         'fc_activation': tf.nn.leaky_relu,
 #         'additional_input': 'weights',
 #         'output_num': None,
@@ -35,9 +35,9 @@ window_length = 50
 
 network_config = {
         'type':'cnn_fc',                                      #
-        'cnn_layer': {'kernel':(3, 48), 'filter':(2, 2)},    # kernal size, number of kernels
+        'cnn_layer': {'kernel':(5, 50), 'filter':(2, 2)},    # kernal size, number of kernels
         'cnn_activation': tf.nn.selu,
-        'fc_layer': [10, 10],                                # 0 to 2 hidden layers, size 1000
+        'fc_layer': [10, 10],                              # 0 to 2 hidden layers, size 1000
         'fc_activation': tf.nn.selu,
         'additional_input': 'weights',                        # last_weights or None
         'output_num': None,                                   #
@@ -63,6 +63,7 @@ env = PortfolioEnv(df_train,
                    steps=256,
                    trading_cost=0.00007,
                    window_length=window_length,
+                   input_rf=True,
                    scale=False,
                    random_reset=False)
 
@@ -76,19 +77,20 @@ env = PortfolioEnv(df_train,
 # l = coo.network_state()
 # print(l['training_network/h2/weights_0'])
 
-# coo.train(env, total_training_step=total_training_step, replay_period=replay_period, tensorboard=True)
+coo.train(env, total_training_step=total_training_step, replay_period=replay_period, tensorboard=True)
 
 
 env_test = PortfolioEnv(df_train,
                         steps=1000,
-                        trading_cost=0.0,
+                        trading_cost=0.00007,
                         window_length=window_length,
+                        input_rf=True,
                         scale=False,
                         random_reset=False)
 # ob = env_test.reset()
 # for i in range(10):
-#     print(coo.action_values(ob))
-#     print(np.argmax(coo.action_values(ob)))
+#     print(ob['history'])
+#     # print(np.argmax(coo.action_values(ob)))
 #     ob, a, r, ob_ = env.step(np.ones(5))
 
 # coo.restore('')
