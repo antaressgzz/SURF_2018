@@ -10,7 +10,7 @@ df_test = pd.read_hdf('./data/forex_30m_CLOSE_1.hf', key='test')
 
 division = 1
 gamma = 0.9
-name = 'dqn-ha'
+name = 'dqn-aaa'
 save = False
 total_training_step = 20000
 replay_period = 2
@@ -21,17 +21,32 @@ asset_num = 5
 feature_num = 1
 window_length = 50
 
+# network_config = {
+#         'type': 'fc',
+#         'fc_layer': [100, 100],
+#         'fc_activation': tf.nn.leaky_relu,
+#         'additional_input': 'weights',
+#         'output_num': None,
+#         'output_activation': None,
+#         'weights_regularization': None,
+#         'weights_initializer': tf.truncated_normal_initializer(stddev=0.1), # tf.constant_initializer(0.005),
+#         'bias_regularization': tf.keras.regularizers.l2(l=0.1)
+#     }
+
 network_config = {
-        'type': 'fc',
-        'fc_layer': [1000],
+        'type':'cnn_fc',                                      #
+        'cnn_layer': {'kernel':(3, 48), 'filter':(2, 2)},    # kernal size, number of kernels
+        'cnn_activation': tf.nn.selu,
+        'fc_layer': [10, 10],                                # 0 to 2 hidden layers, size 1000
         'fc_activation': tf.nn.selu,
-        'additional_input': 'weights',
-        'output_num': None,
+        'additional_input': 'weights',                        # last_weights or None
+        'output_num': None,                                   #
         'output_activation': None,
         'weights_regularization': None,
-        'weights_initializer': tf.truncated_normal_initializer(stddev=0.1), #tf.constant_initializer(0.005),
-        'bias_regularization': tf.keras.regularizers.l2(l=0.1)
+        'weights_initializer': tf.constant_initializer(0.005), #tf.truncated_normal_initializer(stddev=0.1),
+        'bias_regularization': None
     }
+
 
 agent = Dqn_agent(asset_num, division, feature_num, gamma,
                   network_topology=network_config,
@@ -51,34 +66,36 @@ env = PortfolioEnv(df_train,
                    scale=False,
                    random_reset=False)
 
-ob = env.reset()
-for i in range(5):
-    print(coo.action_values(ob))
-    ob, a, r, ob_ = env.step(np.ones(5))
+# ob = env.reset()
+# for i in range(5):
+#     print(coo.action_values(ob))
+#     ob, a, r, ob_ = env.step(np.ones(5))
 
 
-coo.train(env, total_training_step=total_training_step, replay_period=replay_period, tensorboard=True)
 
+# l = coo.network_state()
+# print(l['training_network/h2/weights_0'])
 
+# coo.train(env, total_training_step=total_training_step, replay_period=replay_period, tensorboard=True)
 
 
 env_test = PortfolioEnv(df_train,
-                        steps=2500,
+                        steps=1000,
                         trading_cost=0.0,
                         window_length=window_length,
                         scale=False,
                         random_reset=False)
-ob = env_test.reset()
-for i in range(10):
-    print(coo.action_values(ob))
-    print(np.argmax(coo.action_values(ob)))
-    ob, a, r, ob_ = env.step(np.ones(5))
+# ob = env_test.reset()
+# for i in range(10):
+#     print(coo.action_values(ob))
+#     print(np.argmax(coo.action_values(ob)))
+#     ob, a, r, ob_ = env.step(np.ones(5))
 
 # coo.restore('')
 
 # l = coo.network_state()
-# print(l['training_network/output/weights:0'])
+# print(l['training_network/h2/weights_0'])
 
 coo.back_test(env_test, render_mode='usual')
 
-# coo.open_tb(port='8009')
+# coo.open_tb(port='6666')
