@@ -6,6 +6,7 @@ import tensorflow as tf
 import tensorflow.contrib.layers as layers
 import os
 from core.config import network_config
+from time import time
 
 class Dqn_agent:
     def __init__(self, asset_num, division, feature_num, gamma,
@@ -45,18 +46,6 @@ class Dqn_agent:
         network_topology['output_num'] = self.action_num
         self.initialize_graph(network_topology)
         self.sess.run(tf.global_variables_initializer())
-
-        # if tensorboard == True:
-        #     # tensorboard --logdir=logs/train/name
-        #     for v in tf.trainable_variables():
-        #         tf.summary.histogram(v.name, v)
-        #     self.merged = tf.summary.merge_all()
-        #     self.writer = tf.summary.FileWriter("logs/train/" + self.name, self.sess.graph)
-        #     self.tensorboard = True
-        #     self.log_freq = log_freq
-        # else:
-        #     self.tensorboard = False
-
         self.log_freq = log_freq
 
         if save == True:
@@ -70,37 +59,41 @@ class Dqn_agent:
         self.memory = Memory(self.action_num, self.actions, memory_size=memory_size, batch_size=batch_size)
 
     def initialize_graph(self, config):
-
-        self.price_his = tf.placeholder(dtype=tf.float32,
-                                        shape=[None, self.asset_num - 1, self.history_length, self.feature_num],
-                                        name="inputs")
-        self.price_his_ = tf.placeholder(dtype=tf.float32,
-                                         shape=[None, self.asset_num - 1, self.history_length, self.feature_num],
-                                         name="inputs_next")
-        self.addi_inputs = tf.placeholder(dtype=tf.float32,
-                                          shape=[None, self.asset_num],
-                                          name='additional_inputs')
-        self.targets = tf.placeholder(dtype=tf.float32,
-                                      shape=[None, self.action_num],
-                                      name="targets")
+        self.price_his = tf.placeholder(dtype=tf.float32, shape=[None, self.asset_num - 1, self.history_length, self.feature_num], name="ob")
+        self.price_his_ = tf.placeholder(dtype=tf.float32, shape=[None, self.asset_num - 1, self.history_length, self.feature_num], name="ob_")
+        self.addi_inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.asset_num], name='addi_inputs')
+        self.addi_inputs_ = tf.placeholder(dtype=tf.float32, shape=[None, self.asset_num], name='addi_inputs_')
+        self.r = tf.placeholder(dtype=tf.float32, shape=[None, ], name='r')
+        self.a = tf.placeholder(dtype=tf.int32, shape=[None, ], name='a')
 
         g_b = Graph_builder(config=config)
 
         # Training network
-        with tf.variable_scope('training_network'):
-            self.training_output, self.training_collection = g_b.build_graph(self.price_his, self.addi_inputs, 'training')
-            tf.summary.histogram('action_values', self.training_output)
+        with tf.variable_scope('estm_net'):
+            self.q_estm, self.training_collection = g_b.build_graph(self.price_his, self.addi_inputs, 'training')
+            tf.summary.histogram('action_values', self.q_estm)
 
         # Target network
-        with tf.variable_scope('target_network'):
-            self.target_output, self.target_collection = g_b.build_graph(self.price_his_, self.addi_inputs, 'target')
+        with tf.variable_scope('target_net'):
+            self.q_tar, self.target_collection = g_b.build_graph(self.price_his_, self.addi_inputs_, 'target')
+
+
+        with tf.variable_scope('q_tar'):
+            q_target = self.r + self.gamma * tf.reduce_max(self.q_tar, axis=1, name='q_tar_max')
+            self.q_target = tf.stop_gradient(q_target)
+
+        with tf.variable_scope('q_estm'):
+            a_indices = tf.stack([tf.range(tf.shape(self.a)[0], dtype=tf.int32), self.a], axis=1)
+            self.q_estm_wa = tf.gather_nd(params=self.q_estm, indices=a_indices)
+
+
 
         with tf.name_scope('loss'):
-            self.loss = self.action_num * tf.reduce_mean(tf.squared_difference(self.targets, self.training_output))
+            self.loss = tf.reduce_mean(tf.squared_difference(self.q_target, self.q_estm_wa))
             tf.summary.scalar('loss', self.loss)
 
         with tf.name_scope('train'):
-            self.train = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(self.loss, global_step=self.global_step)
+            self.train = tf.train.AdamOptimizer(self.lr).minimize(self.loss, global_step=self.global_step)
 
         with tf.name_scope('update_target'):
             training_params = tf.get_collection('training_params')
@@ -120,28 +113,18 @@ class Dqn_agent:
 
     def replay(self):
 
-        obs, actions_idx, rewards, obs_ = self.memory.sample()
-
-        next_output = self.sess.run(self.target_output, feed_dict={self.price_his_: obs_['history'],
-                                                                   self.addi_inputs: obs_['weights']})
-
-        q_next = np.amax(next_output, axis=1)
-
-        training_output = self.sess.run(self.training_output, feed_dict={self.price_his: obs['history'], self.addi_inputs:obs['weights']})
-
-        batch_idx = np.arange(len(actions_idx))
-
-        targets = training_output.copy()
-
-        targets[batch_idx, actions_idx] = rewards + self.gamma * q_next
-
-        # action_values = training_output[batch_idx, actions]
-        # print(self.sess.run(self.lr))
+        # s = time()
+        obs, as_idx, rs, obs_ = self.memory.sample()
+        # e = time()
+        # print('Sample use:', e-s)
 
         _, global_step = self.sess.run([self.train, self.global_step],
-                                       feed_dict={self.price_his: obs['history'], self.targets: targets, self.addi_inputs:obs['weights']})
-
-        # print(training_output-targets)
+                                       feed_dict={self.price_his: obs['history'],
+                                                  self.price_his_: obs_['history'],
+                                                  self.addi_inputs: obs['weights'],
+                                                  self.addi_inputs_: obs_['weights'],
+                                                  self.a: as_idx,
+                                                  self.r: rs})
 
         # g = self.sess.run(self.grad[0], feed_dict={self.inputs:obs['history'],self.targets:targets})
         # print(g)
@@ -150,8 +133,12 @@ class Dqn_agent:
             self.sess.run(self.update_target)
 
         if self.tensorboard == True and global_step % self.log_freq == 0:
-            s = self.sess.run(self.merged, feed_dict=
-            {self.training_output: training_output, self.price_his: obs['history'], self.targets: targets})
+            s = self.sess.run(self.merged, feed_dict={self.price_his: obs['history'],
+                                                  self.price_his_: obs_['history'],
+                                                  self.addi_inputs: obs['weights'],
+                                                  self.addi_inputs_: obs_['weights'],
+                                                  self.a: as_idx,
+                                                  self.r: rs})
             self.writer.add_summary(s, global_step)
 
         # if global_step % 1000 == 0:
@@ -164,7 +151,7 @@ class Dqn_agent:
     def choose_action(self, observation, test=False):
 
         def action_max():
-            action_values = self.sess.run(self.training_output,
+            action_values = self.sess.run(self.q_estm,
                                           feed_dict={self.price_his: observation['history'][np.newaxis, :, :, :],
                                                      self.addi_inputs: observation['weights'][np.newaxis, :]})  # fctur
             return np.argmax(action_values)
@@ -218,7 +205,7 @@ class Dqn_agent:
         return l
 
     def action_values(self, o):
-        action_values = self.sess.run(self.training_output,
+        action_values = self.sess.run(self.q_estm,
                                       feed_dict={self.price_his: o['history'][np.newaxis, :, :, :],
                                                  self.addi_inputs: o['weights'][np.newaxis, :]})
         return action_values

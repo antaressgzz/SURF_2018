@@ -17,6 +17,8 @@ class Coordinator:
 
         if tensorboard == True:
             self.agent.initialize_tb()
+        else:
+            self.agent.tensorboard = False
 
         self.total_training_step = total_training_step
         self.replay_period = replay_period
@@ -77,5 +79,3 @@ class Coordinator:
 
     def action_values(self, o):
         return self.agent.action_values(o)
-
-

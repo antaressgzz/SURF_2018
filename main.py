@@ -10,9 +10,9 @@ df_test = pd.read_hdf('./data/forex_C_1.hf', key='test')
 
 division = 3
 gamma = 0.9
-name = 'dqn-aaa'
+name = 'dqn-sss'
 save = True
-total_training_step = 1000000
+total_training_step = 20000
 replay_period = 4
 save_period = total_training_step - 2
 batch_size = 32
@@ -79,11 +79,11 @@ env = PortfolioEnv(df_train,
 # l = coo.network_state()
 # print(l['training_network/h2/weights_0'])
 
-coo.train(env, total_training_step=total_training_step, replay_period=replay_period, tensorboard=True)
+coo.train(env, total_training_step=total_training_step, replay_period=replay_period, tensorboard=False)
 
 
 env_test = PortfolioEnv(df_test,
-                        steps=25000,
+                        steps=10000,
                         trading_cost=0.00007,
                         window_length=window_length,
                         input_rf=True,
@@ -105,4 +105,4 @@ env_test = PortfolioEnv(df_test,
 
 coo.back_test(env_test, render_mode='usual')
 
-coo.open_tb(port='6666')
+# coo.open_tb(port='6666')

@@ -18,9 +18,15 @@ class Memory:
                         'weights':np.zeros((self.batch_size, self.weight_size[0]))}
         observations_ = {'history':np.zeros((self.batch_size, self.history_size[0], self.history_size[1], self.history_size[2])),
                          'weights':np.zeros((self.batch_size, self.weight_size[0]))}
+
+        # observations = {}
+        # observations_ = {}
+
         actions_idx = []
         rewards = []
+
         batch_idx = np.random.choice(self.memory_size, self.batch_size, replace=False)
+
         for i, idx in enumerate(batch_idx):
             observations['history'][i, :, :, :] = self.memory_dict[idx][0]['history']
             observations['weights'][i, :] = self.memory_dict[idx][0]['weights']
@@ -31,6 +37,14 @@ class Memory:
             # actions.append(np.where(self.actions == np.array(self.memory_dict[idx][1])))
             actions_idx.append(self.memory_dict[idx][1])
             rewards.append(self.memory_dict[idx][2])
+
+        # observations['history'] = np.stack([self.memory_dict[idx][0]['history'] for idx in batch_idx], axis=0)
+        # observations['weights'] = np.stack([self.memory_dict[idx][0]['weights'] for idx in batch_idx], axis=0)
+        # observations_['history'] = np.stack([self.memory_dict[idx][3]['history'] for idx in batch_idx], axis=0)
+        # observations_['weights'] = np.stack([self.memory_dict[idx][3]['weights'] for idx in batch_idx], axis=0)
+        # actions_idx = np.array([self.memory_dict[idx][1] for idx in batch_idx])
+        # rewards = np.array([self.memory_dict[idx][1] for idx in batch_idx])
+
         ############# Test ##################
         # assert (observations['history'] != 0).all()
         # assert np.isclose(observations_['weights'][0], self.actions[actions_idx[0]]).all()
