@@ -33,7 +33,7 @@ class Graph_builder:
         output = None
         collection = [scope + '_params', tf.GraphKeys.GLOBAL_VARIABLES]
         initializer = self.config['weights_initializer']
-        additional_input = self.config['additional']
+        additional_input = self.config['additional_input']
         filter = self.config['cnn_layer']['filter']
         kernel = self.config['cnn_layer']['kernel']
         cnn_activation = self.config['cnn_activation']
@@ -45,11 +45,12 @@ class Graph_builder:
         weights_regularization = self.config['weights_regularization']
         bias_regularization = self.config['bias_regularization']
 
-        cnn_input = tf.layers.flatten(price_his)
-        conv1 = layers.conv2d(cnn_input, num_outputs=filter[0], kernel_size=(1, kernel[0]), stride=1, trainable=True,
+        conv1 = layers.conv2d(price_his, num_outputs=filter[0], kernel_size=(1, kernel[0]), stride=1, trainable=True,
                               weights_initializer=initializer,activation_fn=cnn_activation,
+                              weights_regularizer=weights_regularization, biases_regularizer=bias_regularization,
                               padding="VALID", variables_collections=collection, scope='conv1')
         conv2 = layers.conv2d(conv1, num_outputs=filter[1], kernel_size=(1, kernel[1]), stride=1, trainable=True,
+                              weights_regularizer=weights_regularization, biases_regularizer=bias_regularization,
                               weights_initializer=initializer, activation_fn=cnn_activation,
                               padding="VALID", variables_collections=collection, scope='conv2')
 

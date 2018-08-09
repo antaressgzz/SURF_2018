@@ -48,7 +48,7 @@ class Coordinator:
         ob = env_test.reset()
 
         while True:
-            # ob['history'] = np.random.normal(size=(4, 50, 1))
+            ob['history'] = np.random.normal(size=(4, 50, 1))
             # print(ob['history'][0][0][0])
             action_idx, action = self.agent.choose_action(ob, test=True)
             ob, reward, done, _ = env_test.step(action)
