@@ -36,3 +36,6 @@ def softmax(w, t=1.0):
     e = np.exp(np.array(w) / t)
     dist = e / np.sum(e)
     return dist
+
+def sigmiod(x):
+    return 1 / (1+np.exp(-0.25*x))

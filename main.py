@@ -5,17 +5,17 @@ from rl_portfolio_Env_Modified.environments import PortfolioEnv
 import tensorflow as tf
 import numpy as np
 
-df_train = pd.read_hdf('./data/forex_30m_CLOSE_1.hf', key='train')
-df_test = pd.read_hdf('./data/forex_30m_CLOSE_1.hf', key='test')
+df_train = pd.read_hdf('./data/forex_C_1.hf', key='train')
+df_test = pd.read_hdf('./data/forex_C_1.hf', key='test')
 
-division = 1
+division = 3
 gamma = 0.9
 name = 'dqn-aaa'
-save = False
-total_training_step = 150000
-replay_period = 2
-save_period = total_training_step-1
-batch_size = 16
+save = True
+total_training_step = 1000000
+replay_period = 4
+save_period = total_training_step - 2
+batch_size = 32
 GPU = False
 asset_num = 5
 feature_num = 1
@@ -35,23 +35,22 @@ window_length = 100
 
 network_config = {
         'type':'cnn_fc',                                      #
-        'cnn_layer': {'kernel':(5, 50), 'filter':(2, 2)},    # kernal size, number of kernels
-        'cnn_activation': tf.nn.selu,
-        'fc_layer': [10, 10],                              # 0 to 2 hidden layers, size 1000
-        'fc_activation': tf.nn.selu,
-        'additional_input': 'weights',                        # last_weights or None
-        'output_num': None,                                   #
+        'cnn_layer': {'kernel':(10, 10), 'filter':(5, 5)},    # kernal size, number of kernels
+        'cnn_activation': tf.nn.leaky_relu,
+        'fc_layer': [100, 100],                              # 0 to 2 hidden layers, size 1000
+        'fc_activation': tf.nn.leaky_relu,
+        'additional_input': 'weights',                        # last_weights or None                                #
         'output_activation': None,
         'weights_regularization': None,
-        'weights_initializer': tf.constant_initializer(0.005), #tf.truncated_normal_initializer(stddev=0.1),
+        'weights_initializer': tf.truncated_normal_initializer(stddev=0.01), # tf.constant_initializer(0.005),
         'bias_regularization': None
     }
 
 
 agent = Dqn_agent(asset_num, division, feature_num, gamma,
                   network_topology=network_config,
-                  learning_rate_decay_step=int(total_training_step/30), update_tar_period=1000,
-                  epsilon=1, epsilon_Min=0.1, epsilon_decay_period=total_training_step*replay_period/5,
+                  learning_rate_decay_step=int(total_training_step/30), update_tar_period=2000,
+                  epsilon=1, epsilon_Min=0.1, epsilon_decay_period=total_training_step*replay_period/4,
                   memory_size=500*batch_size, batch_size=batch_size,
                   history_length=window_length,
                   log_freq=50, save_period=save_period, save=save,
@@ -64,12 +63,15 @@ env = PortfolioEnv(df_train,
                    trading_cost=0.00007,
                    window_length=window_length,
                    input_rf=True,
+                   norm='sig_0.5',
                    scale=False,
                    random_reset=False)
 
 # ob = env.reset()
 # for i in range(5):
-#     print(coo.action_values(ob))
+#     # print(coo.action_values(ob))
+#     print(ob['history'])
+#     # print(ob['history'])
 #     ob, a, r, ob_ = env.step(np.ones(5))
 
 
@@ -80,18 +82,21 @@ env = PortfolioEnv(df_train,
 coo.train(env, total_training_step=total_training_step, replay_period=replay_period, tensorboard=True)
 
 
-env_test = PortfolioEnv(df_train,
-                        steps=1000,
+env_test = PortfolioEnv(df_test,
+                        steps=25000,
                         trading_cost=0.00007,
                         window_length=window_length,
                         input_rf=True,
+                        norm='sig_0.5',
                         scale=False,
                         random_reset=False)
 # ob = env_test.reset()
+# print(ob['weights'])
 # for i in range(10):
 #     print(ob['history'])
-#     # print(np.argmax(coo.action_values(ob)))
-#     ob, a, r, ob_ = env.step(np.ones(5))
+#     # print(coo.action_values(ob))
+#     print(np.argmax(coo.action_values(ob)))
+#     ob, r, done, info = env_test.step(np.ones(5)/5)
 
 # coo.restore('')
 
@@ -100,4 +105,4 @@ env_test = PortfolioEnv(df_train,
 
 coo.back_test(env_test, render_mode='usual')
 
-# coo.open_tb(port='6666')
+coo.open_tb(port='6666')

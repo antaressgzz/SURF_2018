@@ -11,7 +11,7 @@ import gym.spaces
 
 from ..config import eps
 from ..data.utils import normalize, random_shift, scale_to_start
-from ..util import MDD as max_drawdown, sharpe, softmax
+from ..util import MDD as max_drawdown, sharpe, softmax, sigmiod
 from ..callbacks.LivePlot import LivePlot
 from ..callbacks.notebook_plot import LivePlotNotebook
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class DataSrc(object):
     """Acts as data provider for each new episode."""
 
-    def __init__(self, df, steps=252, input_rf=True, scale=True, scale_extra_cols=True,
+    def __init__(self, df, steps=252, input_rf=True, norm='sig', scale=True, scale_extra_cols=True,
                  augment=0.00, window_length=50, random_reset=True):
         """
         DataSrc.
@@ -38,6 +38,7 @@ class DataSrc(object):
         self.augment = augment
         self.random_reset = random_reset
         self.input_rf = input_rf
+        self.norm = norm
         self.scale = scale
         self.scale_extra_cols = scale_extra_cols
         self.window_length = window_length
@@ -89,6 +90,13 @@ class DataSrc(object):
                                              self.window_length].copy()
             data_window = (data_window / _data_window) - 1
             data_window *= 10 ** 4
+            if self.norm == 'sig':
+                data_window = sigmiod(data_window)
+            elif self.norm == 'sig_0.5':
+                data_window = sigmiod(data_window) - 0.5
+            else:
+                print('Invalid norm.')
+
 
         else:
             if self.scale:
@@ -120,15 +128,15 @@ class DataSrc(object):
                 low=self.window_length + 1, high=self._data.shape[1] - self.steps - 2)
         else:
             # continue sequentially, before reseting to start
-            if self.idx > (self._data.shape[1] - 2 * self.steps - 2):
+            if self.idx > (self._data.shape[1] - 2 * self.steps-2):
                 self.idx = self.window_length + 1
             else:
                 self.idx += self.steps
 
         data = self._data[:, self.idx -
-                             self.window_length-1:self.idx + self.steps + 1].copy()
+                             self.window_length-1:self.idx+self.steps+1].copy()
         self.times = self._times[self.idx -
-                                 self.window_length-1:self.idx + self.steps + 1]
+                                 self.window_length-1:self.idx+self.steps+1]
         # augment data to prevent overfitting
         data += np.random.normal(loc=0, scale=self.augment, size=data.shape)
         self.data = data
@@ -245,6 +253,7 @@ class PortfolioEnv(gym.Env):
                  time_cost=0.00,
                  window_length=50,
                  input_rf=False,
+                 norm='sig',
                  augment=0.00,
                  output_mode='EIIE',
                  log_dir=None,
@@ -270,7 +279,7 @@ class PortfolioEnv(gym.Env):
             scale - scales price data by last opening price on each episode (except return)
             scale_extra_cols - scales non price data using mean and std for whole dataset
         """
-        self.src = DataSrc(df=df, steps=steps, input_rf=input_rf, scale=scale, scale_extra_cols=scale_extra_cols,
+        self.src = DataSrc(df=df, steps=steps, input_rf=input_rf, norm=norm, scale=scale, scale_extra_cols=scale_extra_cols,
                            augment=augment, window_length=window_length,
                            random_reset=random_reset)
         self._plot = self._plot2 = self._plot3 = None

@@ -13,8 +13,7 @@ class Dqn_agent:
                  epsilon=1, epsilon_Min=0.1, epsilon_decay_period=100000,
                  learning_rate_decay_step=10000, update_tar_period=1000,
                  history_length=50,
-                 memory_size=10000, batch_size=32,
-                 tensorboard=False, log_freq=50,
+                 memory_size=10000, batch_size=32, log_freq=50,
                  save_period=100000, name='dqn', save=False,
                  GPU=False):
 
@@ -30,9 +29,9 @@ class Dqn_agent:
         self.history_length = history_length
         self.feature_num = feature_num
         self.global_step = tf.Variable(0, trainable=False)
-        # self.lr = tf.train.exponential_decay(learning_rate=0.01, global_step=self.global_step,
-        #                                      decay_steps=learning_rate_decay_step, decay_rate=0.9)
-        self.lr = 0.01
+        self.lr = tf.train.exponential_decay(learning_rate=0.01, global_step=self.global_step,
+                                             decay_steps=learning_rate_decay_step, decay_rate=0.9)
+        # self.lr = 0.01
         self.action_num, self.actions = action_discretization(self.asset_num, self.division)
         
         config = tf.ConfigProto()
@@ -198,8 +197,8 @@ class Dqn_agent:
         return self.memory.get_ave_reward()
 
     def get_lr(self):
-        # return self.sess.run(self.lr)
-        return self.lr
+        return self.sess.run(self.lr)
+        # return self.lr
 
     def restore(self, name):
         self.saver.restore(self.sess, 'logs/checkpoint/'+name)

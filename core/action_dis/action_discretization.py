@@ -33,4 +33,4 @@ def test(asset_num, division):
         assert np.sum(actions[i]) == 1
 
 if __name__ == '__main__':
-    test(4, 5)
+    test(3, 5)
