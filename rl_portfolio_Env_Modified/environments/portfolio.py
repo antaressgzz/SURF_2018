@@ -11,7 +11,7 @@ import gym.spaces
 
 from ..config import eps
 from ..data.utils import normalize, random_shift, scale_to_start
-from ..util import MDD as max_drawdown, sharpe, softmax, sigmiod
+from ..util import MDD as max_drawdown, sharpe, softmax, sigmoid
 from ..callbacks.LivePlot import LivePlot
 from ..callbacks.notebook_plot import LivePlotNotebook
 
@@ -91,9 +91,9 @@ class DataSrc(object):
             data_window = (data_window / _data_window) - 1
             data_window *= 10 ** 4
             if self.norm == 'sig':
-                data_window = sigmiod(data_window)
+                data_window = sigmoid(data_window)
             elif self.norm == 'sig_0.5':
-                data_window = sigmiod(data_window) - 0.5
+                data_window = sigmoid(data_window) - 0.5
 
         else:
             if self.scale:
@@ -180,7 +180,11 @@ class PortfolioSim(object):
         w0 = self.w0
         p0 = self.p0
 
-        dw1 = (y1 * w0) / (np.dot(y1, w0) + eps)  # (eq7) weights evolve into
+        # dw1 = (y1 * w0) / (np.dot(y1, w0) + eps)  # (eq7) weights evolve into
+        dw1 = (y1 * w0) / np.dot(y1, w0)
+
+        if w1 is None:
+            w1 = dw1
 
         # (eq16) cost to change portfolio
         # (excluding change in cash to avoid double counting for transaction cost)
@@ -195,7 +199,8 @@ class PortfolioSim(object):
         p1 = np.clip(p1, 0, np.inf)
 
         rho1 = p1 / p0 - 1  # rate of returns
-        r1 = np.log((p1 + eps) / (p0 + eps))  # (eq10) log rate of return
+        # r1 = np.log((p1 + eps) / (p0 + eps))  # (eq10) log rate of return
+        r1 = np.log(p1 / p0)
         # (eq22) immediate reward is log rate of return scaled by episode length
         # reward = r1 / self.steps
         reward = r1
@@ -225,7 +230,7 @@ class PortfolioSim(object):
             info['price_' + name] = y1[i]
 
         self.infos.append(info)
-        return reward, info, done
+        return w1, reward, info, done
 
     def reset(self):
         self.infos = []
@@ -333,18 +338,21 @@ class PortfolioEnv(gym.Env):
         - cn is the portfolio conversion weights see PortioSim._step for description
         """
 
-        logger.debug('action: %s', action)
-        weights = np.clip(action, 0.0, 1.0)
-        weights /= weights.sum() + eps
-        # Sanity checks
-        assert self.action_space.contains(
-            action), 'action should be within %r but is %r' % (self.action_space, action)
-        np.testing.assert_almost_equal(
-            np.sum(weights), 1.0, 3, err_msg='weights should sum to 1. action="%s"' % weights)
+        if action is not None:
+            logger.debug('action: %s', action)
+            weights = np.clip(action, 0.0, 1.0)
+            weights /= weights.sum() + eps
+            # Sanity checks
+            assert self.action_space.contains(
+                action), 'action should be within %r but is %r' % (self.action_space, action)
+            np.testing.assert_almost_equal(
+                np.sum(weights), 1.0, 3, err_msg='weights should sum to 1. action="%s"' % weights)
+        else:
+            weights = None
 
         history, y1, done1 = self.src._step()
 
-        reward, info, done2 = self.sim._step(weights, y1)
+        weights, reward, info, done2 = self.sim._step(weights, y1)
 
         # calculate return for buy and hold a bit of each asset
         info['market_value'] = np.cumprod(

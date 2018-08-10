@@ -30,7 +30,15 @@ class Coordinator:
             while True:
 
                 action_idx, action = self.agent.choose_action(observation)
+                if action is None:
+                    print(action, 'is chosen.')
+                else:
+                    print(action,'dddddddddddd')
                 observation_, reward, done, info = self.env.step(action)
+                if action is None:
+                    print('------------------------')
+                    print(observation['weights'])
+                    print(observation_['weights'])
                 self.agent.store(observation, action_idx, reward, observation_)
                 observation = observation_
 

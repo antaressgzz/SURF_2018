@@ -11,6 +11,7 @@ from time import time
 class Dqn_agent:
     def __init__(self, asset_num, division, feature_num, gamma,
                  network_topology=network_config['cnn_fc'],
+                 addi_action=True,
                  epsilon=1, epsilon_Min=0.1, epsilon_decay_period=100000,
                  learning_rate_decay_step=10000, update_tar_period=1000,
                  history_length=50,
@@ -34,6 +35,9 @@ class Dqn_agent:
                                              decay_steps=learning_rate_decay_step, decay_rate=0.9)
         # self.lr = 0.01
         self.action_num, self.actions = action_discretization(self.asset_num, self.division)
+        if addi_action == False:
+            del self.actions[self.action_num-1]
+            self.action_num -= 1
         
         config = tf.ConfigProto()
 

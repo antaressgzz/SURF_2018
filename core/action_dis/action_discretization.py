@@ -17,9 +17,8 @@ def action_discretization(asset_num, division):
         actions[pointer] = action / division
         pointer += 1
     # One additional action
-    # actions[action_num] = 'keep'
-    #
-    # action_num += 1
+    actions[action_num] = None
+    action_num += 1
     return action_num, actions
 
 def test(asset_num, division):
@@ -33,4 +32,4 @@ def test(asset_num, division):
         assert np.sum(actions[i]) == 1
 
 if __name__ == '__main__':
-    test(3, 5)
+    test(5, 5)
