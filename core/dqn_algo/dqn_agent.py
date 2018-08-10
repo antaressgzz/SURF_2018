@@ -70,12 +70,12 @@ class Dqn_agent:
 
         # Training network
         with tf.variable_scope('estm_net'):
-            self.q_estm, self.training_collection = g_b.build_graph(self.price_his, self.addi_inputs, 'training')
+            self.q_estm = g_b.build_graph(self.price_his, self.addi_inputs, 'training')
             tf.summary.histogram('action_values', self.q_estm)
 
         # Target network
         with tf.variable_scope('target_net'):
-            self.q_tar, self.target_collection = g_b.build_graph(self.price_his_, self.addi_inputs_, 'target')
+            self.q_tar = g_b.build_graph(self.price_his_, self.addi_inputs_, 'target')
 
 
         with tf.variable_scope('q_tar'):
@@ -86,8 +86,6 @@ class Dqn_agent:
             a_indices = tf.stack([tf.range(tf.shape(self.a)[0], dtype=tf.int32), self.a], axis=1)
             self.q_estm_wa = tf.gather_nd(params=self.q_estm, indices=a_indices)
 
-
-
         with tf.name_scope('loss'):
             self.loss = tf.reduce_mean(tf.squared_difference(self.q_target, self.q_estm_wa))
             tf.summary.scalar('loss', self.loss)
@@ -95,10 +93,13 @@ class Dqn_agent:
         with tf.name_scope('train'):
             self.train = tf.train.AdamOptimizer(self.lr).minimize(self.loss, global_step=self.global_step)
 
+        t_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='target_net')
+        e_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='estm_net')
+
         with tf.name_scope('update_target'):
-            training_params = tf.get_collection('training_params')
-            target_params = tf.get_collection('target_params')
-            self.update_target = [tf.assign(t, l) for t, l in zip(target_params, training_params)]
+            # training_params = tf.get_collection('training_params')
+            # target_params = tf.get_collection('target_params')
+            self.update_target = [tf.assign(t, l) for t, l in zip(t_params, e_params)]
 
         # self.grad = []
         # for v in tf.trainable_variables():

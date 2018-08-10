@@ -33,13 +33,16 @@ class Coordinator:
                 observation_, reward, done, info = self.env.step(action)
                 self.agent.store(observation, action_idx, reward, observation_)
                 observation = observation_
+
                 if self.agent.start_replay():
                     if self.agent.memory_cnt() % self.replay_period == 0:
                         self.agent.replay()  # update target
                         training_step = self.agent.get_training_step()
+
                         if (training_step - 1) % 5000 == 0:
                             print('training_step: {}, epsilon: {:.2f}, lr: {:.2e}, ave_reward: {:.2e}'.format(
                             training_step, self.agent.epsilon, self.agent.get_lr(), self.agent.get_ave_reward()))
+
                 if done:
                     break
 

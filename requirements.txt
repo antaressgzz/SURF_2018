@@ -1,6 +1,6 @@
 # rl
 gym==0.9.3
-tensorflow>=1.4.0
+tensorflow-gpu>=1.4.0
 h5py==2.7.0
 # numbers
 tables==3.4.2
