@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class DataSrc(object):
     """Acts as data provider for each new episode."""
 
-    def __init__(self, df, steps=252, input_rf=True, norm='sig', scale=True, scale_extra_cols=True,
+    def __init__(self, df, steps=252, input_rf=False, norm=None, scale=True, scale_extra_cols=True,
                  augment=0.00, window_length=50, random_reset=True):
         """
         DataSrc.
@@ -94,9 +94,6 @@ class DataSrc(object):
                 data_window = sigmiod(data_window)
             elif self.norm == 'sig_0.5':
                 data_window = sigmiod(data_window) - 0.5
-            else:
-                print('Invalid norm.')
-
 
         else:
             if self.scale:
@@ -253,7 +250,7 @@ class PortfolioEnv(gym.Env):
                  time_cost=0.00,
                  window_length=50,
                  input_rf=False,
-                 norm='sig',
+                 norm=None,
                  augment=0.00,
                  output_mode='EIIE',
                  log_dir=None,

@@ -46,7 +46,6 @@ class Dqn_agent:
         network_topology['output_num'] = self.action_num
         self.initialize_graph(network_topology)
         self.sess.run(tf.global_variables_initializer())
-        self.log_freq = log_freq
 
         if save == True:
             self.save = save
@@ -135,11 +134,11 @@ class Dqn_agent:
 
         if self.tensorboard == True and global_step % self.log_freq == 0:
             s = self.sess.run(self.merged, feed_dict={self.price_his: obs['history'],
-                                                  self.price_his_: obs_['history'],
-                                                  self.addi_inputs: obs['weights'],
-                                                  self.addi_inputs_: obs_['weights'],
-                                                  self.a: as_idx,
-                                                  self.r: rs})
+                                                      self.price_his_: obs_['history'],
+                                                      self.addi_inputs: obs['weights'],
+                                                      self.addi_inputs_: obs_['weights'],
+                                                      self.a: as_idx,
+                                                      self.r: rs})
             self.writer.add_summary(s, global_step)
 
         # if global_step % 1000 == 0:

@@ -76,19 +76,19 @@ env = PortfolioEnv(df_train,
                    scale=False,
                    random_reset=False)
 
-# ob = env.reset()
-# for i in range(5):
-#     # print(coo.action_values(ob))
-#     print(ob['history'])
+ob = env.reset()
+for i in range(5):
+    # print(coo.action_values(ob))
+    print(ob['history'])
 #     # print(ob['history'])
-#     ob, a, r, ob_ = env.step(np.ones(5))
+    ob, a, r, ob_ = env.step(np.ones(5))
 
 
 
 # l = coo.network_state()
 # print(l['training_network/h2/weights_0'])
 
-coo.train(env, total_training_step=total_training_step, replay_period=replay_period, tensorboard=True)
+# coo.train(env, total_training_step=total_training_step, replay_period=replay_period, tensorboard=True)
 
 
 # env_test = PortfolioEnv(df_test,
