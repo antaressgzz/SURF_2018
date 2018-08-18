@@ -8,8 +8,9 @@ import numpy as np
 
 
 class Coordinator:
-    def __init__(self, agent):
+    def __init__(self, agent, trade_period):
         self.agent = agent
+        self.trade_period = trade_period
 
     def train(self, env, total_training_step, replay_period, tensorboard=False):
 
@@ -27,18 +28,12 @@ class Coordinator:
 
         while training_step < self.total_training_step:
             observation = self.env.reset()
+            action_idx, action = self.agent.choose_action(observation)
             while True:
-
-                action_idx, action = self.agent.choose_action(observation)
-                # if action is None:
-                #     print(action, 'is chosen.')
-                # else:
-                #     print(action,'dddddddddddd')
+                if (training_step + 1) % self.trade_period == 0:
+                    action_idx, action = self.agent.choose_action(observation)
                 observation_, reward, done, info = self.env.step(action)
-                # if action is None:
-                    # print('------------------------')
-                    # print(observation['weights'])
-                    # print(observation_['weights'])
+                reward *= 1000
                 self.agent.store(observation, action_idx, reward, observation_)
                 observation = observation_
 
@@ -57,14 +52,14 @@ class Coordinator:
         print("Successfully trained.")
 
     def back_test(self, env_test, render_mode='usual'):
-
+        test_step = 0
         ob = env_test.reset()
-
+        action_idx, action = self.agent.choose_action(ob, test=True)
         while True:
-            # ob['history'] = np.random.normal(size=(4, 50, 1))
-            # print(ob['history'][0][0][0])
-            action_idx, action = self.agent.choose_action(ob, test=True)
+            if (test_step + 1) % self.trade_period == 0:
+                action_idx, action = self.agent.choose_action(ob, test=True)
             ob, reward, done, _ = env_test.step(action)
+            test_step += 1
             if done:
                 break
 

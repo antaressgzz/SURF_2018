@@ -58,7 +58,7 @@ class DataSrc(object):
         self._data = np.transpose(data, (1, 0, 2))
         self._times = df.index
 
-        self.price_columns = ['close']
+        self.price_columns = ['high', 'low', 'close']
         self.non_price_columns = set(
             df.columns.levels[1]) - set(self.price_columns)
 
@@ -79,27 +79,36 @@ class DataSrc(object):
                                              self.window_length].copy()
 
         # (eq.1) prices
-        y1 = data_window[:, -1, 0] / data_window[:, -2, 0]
+        y1 = data_window[:, -1, 2] / data_window[:, -2, 2]
+        # y1 = self.data[:, self.step+1+self.window_length, 0].copy() / self.data[:, self.step+self.window_length, 0].copy()
         y1 = np.concatenate([[1.0], y1])  # add cash price
 
         # (eq 18) X: prices are divided by close price
         nb_pc = len(self.price_columns)
 
-        if self.input_rf:
-            _data_window = self.data[:, self.step:self.step+
-                                             self.window_length].copy()
-            data_window = (data_window / _data_window) - 1
-            data_window *= 10 ** 4
-            if self.norm == 'sig':
-                data_window = sigmoid(data_window)
-            elif self.norm == 'sig_0.5':
-                data_window = sigmoid(data_window) - 0.5
+        # if self.input_rf:
+        #     _data_window = self.data[:, self.step:self.step+
+        #                                      self.window_length].copy()
+        #     data_window = (data_window / _data_window) - 1
+        #     data_window *= 10 ** 3
+        #     if self.norm == 'sig':
+        #         data_window = sigmoid(data_window)
+        #     elif self.norm == 'sig_0.5':
+        #         data_window = sigmoid(data_window) - 0.5
 
-        else:
-            if self.scale:
-                last_close_price = data_window[:, -1, 0]
+        # else:
+        if self.scale == True:
+            if self.norm == 1:
+                last_close_price = data_window[:, -1, 2]
                 data_window[:, :, :nb_pc] /= last_close_price[:,
                                                 np.newaxis, np.newaxis]
+            elif self.norm == 2:
+                _data_window = self.data[:, self.step:self.step+
+                                                 self.window_length].copy()
+                data_window = data_window / _data_window
+            else:
+                print('invalid norm')
+
 
         if self.scale_extra_cols:
             # normalize non price columns
@@ -169,7 +178,7 @@ class PortfolioSim(object):
         self.asset_names = asset_names
         self.reset()
 
-    def _step(self, w1, y1):
+    def _step(self, w0, y1):
         """
         Step.
         w1 - new action of portfolio weights - e.g. [0.1,0.9, 0.0]
@@ -177,65 +186,66 @@ class PortfolioSim(object):
             e.g. [1.0, 0.9, 1.1]
         Numbered equations are from https://arxiv.org/abs/1706.10059
         """
-        w0 = self.w0
-        p0 = self.p0
+        # w0 = self.w0
+        # p0 = self.p0
+
+        _p0 = self._p0
+        _w0 = self._w0
+        c1 = self.cost * (np.abs(_w0[1:]-w0[1:])).sum()
+        w0_ = (y1 * w0) / np.dot(y1, w0)
+        p0_ = _p0 * (1 - c1) * np.dot(w0, y1)
 
         # dw1 = (y1 * w0) / (np.dot(y1, w0) + eps)  # (eq7) weights evolve into
-        dw1 = (y1 * w0) / np.dot(y1, w0)
-
-        if w1 is None:
-            w1 = dw1
-
         # (eq16) cost to change portfolio
         # (excluding change in cash to avoid double counting for transaction cost)
-        c1 = self.cost * (
-            np.abs(dw1[1:] - w1[1:])).sum()
-
-        p1 = p0 * (1 - c1) * np.dot(y1, w0)  # (eq11) final portfolio value
-
-        p1 = p1 * (1 - self.time_cost)  # we can add a cost to holding
-
+        # c1 = self.cost * (np.abs(dw1[1:] - w1[1:])).sum()
+        # p1 = p0 * (1 - c1) * np.dot(y1, w0)  # (eq11) final portfolio value
+        # p1 = p1 * (1 - self.time_cost)  # we can add a cost to holding
         # can't have negative holdings in this model (no shorts)
-        p1 = np.clip(p1, 0, np.inf)
+        # p1 = np.clip(p1, 0, np.inf)
+        # rho1 = p1 / p0 - 1  # rate of returns
+        rho1 = p0_ / _p0 - 1  # rate of returns
 
-        rho1 = p1 / p0 - 1  # rate of returns
         # r1 = np.log((p1 + eps) / (p0 + eps))  # (eq10) log rate of return
-        r1 = np.log(p1 / p0)
+        r1 = np.log(p0_  + eps/ _p0 + eps)
+
         # (eq22) immediate reward is log rate of return scaled by episode length
         # reward = r1 / self.steps
         reward = r1
 
         # remember for next step
-        self.w0 = w1
-        self.p0 = p1
+        self._w0 = w0_
+        self._p0 = p0_
 
+        # self.w0 = w1
+        # self.p0 = p1
         # if we run out of money, we're done
-        done = bool(p1 == 0)
+        done = bool(p0_ == 0)
 
         # should only return single values, not list
         info = {
             "reward": reward,
             "log_return": r1,
-            "portfolio_value": p1,
+            "portfolio_value": p0_,
             "market_return": y1.mean(),
             "rate_of_return": rho1,
-            "weights_mean": w1.mean(),
-            "weights_std": w1.std(),
+            "weights_mean": w0.mean(),
+            "weights_std": w0.std(),
             "cost": c1,
         }
 
         # record weights and prices
-        for i, name in enumerate(['BTCBTC'] + self.asset_names):
-            info['weight_' + name] = w1[i]
+        for i, name in enumerate(['USD_USD'] + self.asset_names):
+            info['weight_' + name] = w0[i]
             info['price_' + name] = y1[i]
 
         self.infos.append(info)
-        return w1, reward, info, done
+        return reward, info, done
 
     def reset(self):
         self.infos = []
-        self.w0 = np.array([1.0] + [0.0] * len(self.asset_names))
-        self.p0 = 1.0
+        self._w0 = np.array([1.0] + [0.0] * len(self.asset_names))
+        self._p0 = 1.0
 
 
 class PortfolioEnv(gym.Env):
@@ -338,21 +348,18 @@ class PortfolioEnv(gym.Env):
         - cn is the portfolio conversion weights see PortioSim._step for description
         """
 
-        if action is not None:
-            logger.debug('action: %s', action)
-            weights = np.clip(action, 0.0, 1.0)
-            weights /= weights.sum() + eps
-            # Sanity checks
-            assert self.action_space.contains(
-                action), 'action should be within %r but is %r' % (self.action_space, action)
-            np.testing.assert_almost_equal(
-                np.sum(weights), 1.0, 3, err_msg='weights should sum to 1. action="%s"' % weights)
-        else:
-            weights = None
+        logger.debug('action: %s', action)
+        weights = np.clip(action, 0.0, 1.0)
+        weights /= weights.sum() + eps
+        # Sanity checks
+        assert self.action_space.contains(
+            action), 'action should be within %r but is %r' % (self.action_space, action)
+        np.testing.assert_almost_equal(
+            np.sum(weights), 1.0, 3, err_msg='weights should sum to 1. action="%s"' % weights)
 
         history, y1, done1 = self.src._step()
 
-        weights, reward, info, done2 = self.sim._step(weights, y1)
+        reward, info, done2 = self.sim._step(weights, y1)
 
         # calculate return for buy and hold a bit of each asset
         info['market_value'] = np.cumprod(
@@ -379,7 +386,8 @@ class PortfolioEnv(gym.Env):
         self.sim.reset()
         self.src.reset()
         self.infos = []
-        action = self.sim.w0
+        # action = self.sim.w0
+        action = self.sim._w0
         observation, reward, done, info = self.step(action)
         return observation
 
@@ -410,7 +418,7 @@ class PortfolioEnv(gym.Env):
         df_info.index = pd.to_datetime(df_info["date"], unit='s')
 
         # plot prices and performance
-        all_assets = ['BTCBTC'] + self.sim.asset_names
+        all_assets = ['USD_USD'] + self.sim.asset_names
         if not self._plot:
             colors = [None] * len(all_assets) + ['black']
             self._plot_dir = os.path.join(
