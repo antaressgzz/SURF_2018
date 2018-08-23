@@ -6,16 +6,17 @@ import tensorflow as tf
 import tensorflow.contrib.layers as layers
 import os
 from core.config import network_config
-from time import time
 
 class Dqn_agent:
     def __init__(self, asset_num, division, feature_num, gamma,
                  network_topology=network_config['cnn_fc'],
                  epsilon=1, epsilon_Min=0.1, epsilon_decay_period=100000,
-                 learning_rate_decay_step=10000, update_tar_period=1000,
+                 update_tar_period=1000,
                  history_length=50,
-                 memory_size=10000, batch_size=32, log_freq=50,
-                 save_period=100000, name='dqn', save=False,
+                 memory_size=10000,
+                 batch_size=32,
+                 save_period=100000,
+                 name='dqn', save=False,
                  GPU=False):
 
         self.epsilon = epsilon
@@ -26,15 +27,13 @@ class Dqn_agent:
         self.gamma = gamma
         self.name = name
         self.update_tar_period = update_tar_period
-        self.log_freq = log_freq
         self.history_length = history_length
         self.feature_num = feature_num
         self.global_step = tf.Variable(0, trainable=False)
         # self.lr = tf.train.exponential_decay(learning_rate=0.01, global_step=self.global_step,
         #                                      decay_steps=learning_rate_decay_step, decay_rate=0.9)
-        self.lr = 0.005
         self.action_num, self.actions = action_discretization(self.asset_num, self.division)
-        
+
         config = tf.ConfigProto()
 
         if GPU == False:
@@ -46,7 +45,7 @@ class Dqn_agent:
         network_topology['output_num'] = self.action_num
 
         self.config = network_topology
-        self.initialize_graph(network_topology)
+        self.initialize_graph()
         self.sess.run(tf.global_variables_initializer())
 
         if save == True:
@@ -59,9 +58,13 @@ class Dqn_agent:
 
         self.memory = Memory(self.action_num, self.actions, memory_size=memory_size, batch_size=batch_size)
 
-    def initialize_graph(self, config):
-        self.price_his = tf.placeholder(dtype=tf.float32, shape=[None, self.asset_num - 1, self.history_length, self.feature_num], name="ob")
-        self.price_his_ = tf.placeholder(dtype=tf.float32, shape=[None, self.asset_num - 1, self.history_length, self.feature_num], name="ob_")
+    def initialize_graph(self):
+        self.price_his = tf.placeholder(dtype=tf.float32,
+                                        shape=[None, self.asset_num - 1, self.history_length, self.feature_num],
+                                        name="ob")
+        self.price_his_ = tf.placeholder(dtype=tf.float32,
+                                         shape=[None, self.asset_num - 1, self.history_length, self.feature_num],
+                                         name="ob_")
         self.addi_inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.asset_num], name='addi_inputs')
         self.addi_inputs_ = tf.placeholder(dtype=tf.float32, shape=[None, self.asset_num], name='addi_inputs_')
         self.r = tf.placeholder(dtype=tf.float32, shape=[None, ], name='r')
@@ -70,147 +73,118 @@ class Dqn_agent:
         # Training network
         with tf.variable_scope('estm_net'):
             self.q_pred = self.build_graph(self.price_his, self.addi_inputs)
-            tf.summary.histogram('action_values', self.q_pred)
 
         # Target network
         with tf.variable_scope('target_net'):
-            self.q_tar_pred = self.build_graph(self.price_his_, self.addi_inputs_)
+            self.tar_pred = self.build_graph(self.price_his_, self.addi_inputs_)
 
         with tf.variable_scope('q_tar'):
-            self.q_target = tf.placeholder(dtype=tf.float32, shape=[None, self.action_num], name='q_target')
-            # a = tf.argmax(self.q_estm, axis=1, output_type=tf.int32)
-            # a_indices = tf.stack([tf.range(tf.shape(a)[0], dtype=tf.int32), a], axis=1)
-            # q_target = self.r + self.gamma * tf.gather_nd(params=self.q_tar, indices=a_indices)
-            # # q_target = self.r + self.gamma * tf.reduce_max(self.q_tar, axis=1, name='q_tar_max ')
-            # self.q_target = tf.stop_gradient(q_target)
+            self.q_target = tf.placeholder(dtype=tf.float32, shape=[None], name='q_target')
 
-        with tf.variable_scope('q_estm'):
+        with tf.variable_scope('q_estm_wa'):
             a_indices = tf.stack([tf.range(tf.shape(self.a)[0], dtype=tf.int32), self.a], axis=1)
             self.q_estm_wa = tf.gather_nd(params=self.q_pred, indices=a_indices)
 
         with tf.name_scope('loss'):
-            self.loss = self.action_num * tf.reduce_mean(tf.squared_difference(self.q_target, self.q_pred))
-            tf.summary.scalar('loss', self.loss)
+            error = tf.clip_by_value(self.q_target-self.q_estm_wa, -1, 1)
+            square = tf.square(error)
+            self.loss = tf.reduce_mean(square)
 
         with tf.name_scope('train'):
-            self.train = tf.train.RMSPropOptimizer(self.lr).minimize(self.loss, global_step=self.global_step)
+            self.optimizer = tf.train.RMSPropOptimizer(0.00025, 0.95, 0.0, 1e-6)
+            self.train_op = self.optimizer.minimize(self.loss, global_step=self.global_step)
 
         t_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='target_net')
         e_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='estm_net')
         self.update_target = [tf.assign(t, l) for t, l in zip(t_params, e_params)]
 
-        # self.grad = []
-        # for v in tf.trainable_variables():
-        #     self.grad.append(tf.gradients(self.loss, [v]))
 
     def build_graph(self, price_his, addi_inputs):
 
-        initializer = self.config['weights_initializer']
-        additional_input = self.config['additional_input']
-        filter = self.config['cnn_layer']['filter']
-        kernel = self.config['cnn_layer']['kernel']
-        cnn_activation = self.config['cnn_activation']
-        layers_sizes = self.config['fc_layer']
         cnn_bias = self.config['cnn_bias']
-        num_layer = len(layers_sizes)
-        fc_activation = self.config['fc_activation']
-        num_output = self.config['output_num']
-        output_activation = self.config['output_activation']
-        weights_regularization = self.config['weights_regularization']
-        bias_regularization = self.config['bias_regularization']
+        fc_bias = self.config['fc_bias']
+        activation = self.config['activation']
+        initializer = self.config['initializer']
 
-        conv1 = tf.layers.conv2d(price_his, filters=filter[0], kernel_size=[1, kernel[0]], trainable=True, use_bias=cnn_bias,
-                              kernel_initializer=initializer, padding="VALID", name='conv1')
-        # conv_bn1 = tf.layers.batch_normalization(conv1, training=self.is_training, name='conv_bn1')
-        conv_a1 = cnn_activation(conv1)
-
-        conv2 = tf.layers.conv2d(conv_a1, filters=filter[1], kernel_size=[1, kernel[1]], trainable=True, use_bias=cnn_bias,
+        conv1 = tf.layers.conv2d(price_his, filters=16, kernel_size=[1, 8], strides=[1, 4], trainable=True,
+                                 use_bias=cnn_bias, activation=activation,
+                                 kernel_initializer=initializer, padding="VALID", name='conv1')
+        print(conv1.shape)
+        conv2 = tf.layers.conv2d(conv1, filters=8, kernel_size=[1, 4], strides=[1, 2], trainable=True,
+                                 use_bias=cnn_bias, activation=activation,
                                  kernel_initializer=initializer, padding="VALID", name='conv2')
-        # conv_bn2 = tf.layers.batch_normalization(conv2, training=self.is_training, name='conv_bn2')
-        conv_a2 = cnn_activation(conv2)
+        print(conv2.shape)
 
-        fc_input = tf.layers.flatten(conv_a2)
+        fc_input = tf.layers.flatten(conv2)
 
-        weights = tf.get_variable('output', dtype=tf.float32, initializer=initializer,
-                                  shape=[fc_input.shape[1], self.action_num], trainable=True)
-        output = tf.matmul(fc_input, weights)
+        if fc_bias == True:
+            fc1 = layers.fully_connected(fc_input, num_outputs=512, activation_fn=activation,
+                                         weights_initializer=initializer, trainable=True, scope='fc1')
+            output = layers.fully_connected(fc1, num_outputs=self.action_num, activation_fn=activation,
+                                            weights_initializer=initializer, trainable=True, scope='output')
+        else:
+            w1 = tf.get_variable('w1', dtype=tf.float32, initializer=initializer,
+                                shape=[fc_input.shape[1], 512], trainable=True)
+            a1 = activation(tf.matmul(fc_input, w1))
+            w2 = tf.get_variable('w2', dtype=tf.float32, initializer=initializer,
+                                shape=[512, self.action_num], trainable=True)
+            output = tf.matmul(a1, w2)
 
         return output
 
     def initialize_tb(self):
         for v in tf.trainable_variables():
             tf.summary.histogram(v.name, v)
+        tf.summary.scalar("loss", self.loss),
+        tf.summary.histogram("q_values_hist", self.q_pred),
+        tf.summary.scalar("max_q_value", tf.reduce_max(self.q_pred))
         self.merged = tf.summary.merge_all()
         self.writer = tf.summary.FileWriter("logs/train/" + self.name, self.sess.graph)
         self.tensorboard = True
 
     def replay(self):
+        obs, action_batch, reward_batch, obs_ = self.memory.sample()
 
-        # s = time()
-        obs, as_idx, rs, obs_ = self.memory.sample()
-        # e = time()
-        # print('Sample use:', e-s)
-
-        q_pred_next = self.sess.run(self.q_pred, feed_dict={self.price_his: obs_['history']})
-        q_max_idx = np.argmax(q_pred_next, axis=1)
-        q_tar_pred = self.sess.run(self.q_tar_pred,feed_dict={self.price_his_: obs_['history']})
-        batch_idx = np.arange(len(as_idx))
-
-        # Target value
-        q_pred = self.sess.run(self.q_pred, feed_dict={self.price_his: obs['history']})
-        targets = q_pred.copy()
-        targets[batch_idx, as_idx] = rs + self.gamma * q_tar_pred[batch_idx, q_max_idx]
+        q_values_next = self.sess.run(self.q_pred, feed_dict={self.price_his: obs_['history']})
+        best_actions = np.argmax(q_values_next, axis=1)
+        q_values_next_target = self.sess.run(self.tar_pred, feed_dict={self.price_his_: obs_['history']})
+        targets_batch = reward_batch + self.gamma * q_values_next_target[np.arange(len(action_batch)), best_actions]
 
         # Train
-        fd = {self.q_target: targets,
-              self.price_his: obs['history']}
-        _, global_step = self.sess.run([self.train, self.global_step], feed_dict=fd)
+        fd = {self.q_target: targets_batch,
+              self.price_his: obs['history'],
+              self.a : action_batch}
+        _, global_step = self.sess.run([self.train_op, self.global_step], feed_dict=fd)
+
         if global_step % self.update_tar_period == 0:
             self.sess.run(self.update_target)
 
-        # _, global_step = self.sess.run([self.train, self.global_step],
-        #                                feed_dict={self.price_his: obs_['history'],
-        #                                           self.price_his_: obs_['history'],
-        #                                           self.addi_inputs: obs['weights'],
-        #                                           self.addi_inputs_: obs_['weights'],
-        #                                           self.a: as_idx,
-        #                                           self.r: rs})
-
-        # g = self.sess.run(self.grad[0], feed_dict={self.inputs:obs['history'],self.targets:targets})
-        # print(g)
-
-        if self.tensorboard == True and global_step % self.log_freq == 0:
+        if self.tensorboard == True and global_step % 50 == 0:
             s = self.sess.run(self.merged, feed_dict=fd)
             self.writer.add_summary(s, global_step)
 
-        # if global_step % 1000 == 0:
-            # print('global_step:', global_step)
-            # print('save_period:', self.save_period)
-
         if self.save == True and global_step % self.save_period == 0:
             self.saver.save(self.sess, 'logs/checkpoint/' + self.name, global_step=global_step)
+
+        if self.epsilon > self.epsilon_min:
+            self.epsilon -= (1 - self.epsilon_min) / self.epsilon_decay_period
 
     def choose_action(self, observation, test=False):
 
         def action_max():
             action_values = self.sess.run(self.q_pred,
-                                          feed_dict={self.price_his: observation['history'][np.newaxis, :, :, :]})  # fctur
+                        feed_dict={self.price_his: observation['history'][np.newaxis, :, :, :]})  # fctur
             return np.argmax(action_values)
 
         if test == False:
             if np.random.rand() > self.epsilon:
                 action_idx = action_max()
-                # print('max   ',action_idx)
             else:
-                action_idx = np.random.randint(0, self.action_num)  # keyerror: 126
-                # print('else   ',action_idx)
+                action_idx = np.random.randint(0, self.action_num)
         else:
             action_idx = action_max()
 
         action_weights = self.actions[action_idx]
-
-        if self.epsilon > self.epsilon_min:
-            self.epsilon -= (1 - self.epsilon_min) / self.epsilon_decay_period
 
         return action_idx, action_weights
 
@@ -224,12 +198,9 @@ class Dqn_agent:
     def get_ave_reward(self):
         return self.memory.get_ave_reward()
 
-    def get_lr(self):
-        # return self.sess.run(self.lr)
-        return self.lr
 
     def restore(self, name):
-        self.saver.restore(self.sess, 'logs/checkpoint/'+name)
+        self.saver.restore(self.sess, 'logs/checkpoint/' + name)
 
     def start_replay(self):
         return self.memory.start_replay()
@@ -242,10 +213,9 @@ class Dqn_agent:
         for v in tf.trainable_variables():
             print(v.name)
             l[v.name] = self.sess.run(v)
-
         return l
 
     def action_values(self, o):
         action_values = self.sess.run(self.q_pred,
-                                      feed_dict={self.price_his: o['history'][np.newaxis, :, :, :]})
+                     feed_dict={self.price_his: o['history'][np.newaxis, :, :, :]})
         return action_values

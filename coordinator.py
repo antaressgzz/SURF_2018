@@ -15,7 +15,6 @@ class Coordinator:
     def train(self, env, total_training_step, replay_period, tensorboard=False):
 
         self.env = env
-
         if tensorboard == True:
             self.agent.initialize_tb()
         else:
@@ -25,7 +24,6 @@ class Coordinator:
         self.replay_period = replay_period
 
         training_step = 0
-
         while training_step < self.total_training_step:
             observation = self.env.reset()
             action_idx, action = self.agent.choose_action(observation)
@@ -33,7 +31,8 @@ class Coordinator:
                 if (training_step + 1) % self.trade_period == 0:
                     action_idx, action = self.agent.choose_action(observation)
                 observation_, reward, done, info = self.env.step(action)
-                reward *= 1000
+                reward *= 100
+                reward = np.clip(reward, -1, 1)
                 self.agent.store(observation, action_idx, reward, observation_)
                 observation = observation_
 
@@ -41,11 +40,9 @@ class Coordinator:
                     if self.agent.memory_cnt() % self.replay_period == 0:
                         self.agent.replay()  # update target
                         training_step = self.agent.get_training_step()
-
                         if (training_step - 1) % 5000 == 0:
-                            print('training_step: {}, epsilon: {:.2f}, lr: {:.2e}, ave_reward: {:.2e}'.format(
-                            training_step, self.agent.epsilon, self.agent.get_lr(), self.agent.get_ave_reward()))
-
+                            print('training_step: {}, epsilon: {:.2f}, ave_reward: {:.2e}'.format(
+                            training_step, self.agent.epsilon, self.agent.get_ave_reward()/100))
                 if done:
                     break
 

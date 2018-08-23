@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class DataSrc(object):
     """Acts as data provider for each new episode."""
 
-    def __init__(self, df, steps=252, input_rf=False, norm=None, scale=True, scale_extra_cols=True,
+    def __init__(self, df, steps=252, input='price', norm=None, scale_extra_cols=True,
                  augment=0.00, window_length=50, random_reset=True):
         """
         DataSrc.
@@ -37,9 +37,8 @@ class DataSrc(object):
         self.steps = steps + 1
         self.augment = augment
         self.random_reset = random_reset
-        self.input_rf = input_rf
+        self.input = input
         self.norm = norm
-        self.scale = scale
         self.scale_extra_cols = scale_extra_cols
         self.window_length = window_length
         self.idx = self.window_length
@@ -58,14 +57,15 @@ class DataSrc(object):
         self._data = np.transpose(data, (1, 0, 2))
         self._times = df.index
 
-        self.price_columns = ['high', 'low', 'close']
-        self.non_price_columns = set(
-            df.columns.levels[1]) - set(self.price_columns)
+        self.price_columns = self.features
+        self.close_pos = self.price_columns.index('close')
+        # self.non_price_columns = set(
+        #     df.columns.levels[1]) - set(self.price_columns)
 
         # Stats to let us normalize non price columns
-        if scale_extra_cols:
-            x = self._data.reshape((-1, len(self.features)))
-            self.stats = dict(mean=x.mean(0), std=x.std(0))
+        # if scale_extra_cols:
+        #     x = self._data.reshape((-1, len(self.features)))
+        #     self.stats = dict(mean=x.mean(0), std=x.std(0))
             # for column in self._data.columns.levels[1].tolist():
             #     x = df.xs(key=column, axis=1, level='Price').as_matrix()[:, :]
             #     self.stats["mean"].append(x.mean())
@@ -79,46 +79,42 @@ class DataSrc(object):
                                              self.window_length].copy()
 
         # (eq.1) prices
-        y1 = data_window[:, -1, 2] / data_window[:, -2, 2]
+        y1 = data_window[:, -1, self.close_pos] / data_window[:, -2, self.close_pos]
         # y1 = self.data[:, self.step+1+self.window_length, 0].copy() / self.data[:, self.step+self.window_length, 0].copy()
         y1 = np.concatenate([[1.0], y1])  # add cash price
 
         # (eq 18) X: prices are divided by close price
         nb_pc = len(self.price_columns)
 
-        # if self.input_rf:
-        #     _data_window = self.data[:, self.step:self.step+
-        #                                      self.window_length].copy()
-        #     data_window = (data_window / _data_window) - 1
-        #     data_window *= 10 ** 3
-        #     if self.norm == 'sig':
-        #         data_window = sigmoid(data_window)
-        #     elif self.norm == 'sig_0.5':
-        #         data_window = sigmoid(data_window) - 0.5
-
-        # else:
-        if self.scale == True:
-            if self.norm == 1:
-                last_close_price = data_window[:, -1, 2]
+        if self.input == 'price':
+            if self.norm == 'latest_close':
+                last_close_price = data_window[:, -1, self.close_pos]
                 data_window[:, :, :nb_pc] /= last_close_price[:,
                                                 np.newaxis, np.newaxis]
-            elif self.norm == 2:
-                _data_window = self.data[:, self.step:self.step+
-                                                 self.window_length].copy()
+            elif self.norm == 'previous':
+                _data_window = self.data[:, self.step:self.step+self.window_length].copy()
                 data_window = data_window / _data_window
+            elif self.norm == None:
+                pass
             else:
-                print('invalid norm')
+                print('Invalid norm.')
+        elif self.input == 'rf':
+            _data_window = self.data[:, self.step:self.step+self.window_length].copy()
+            data_window = (data_window / _data_window) - 1
+            data_window *= 1000
+            data_window = np.clip(data_window, -1, 1)
+        else:
+            print('Invalid Input.')
 
-
-        if self.scale_extra_cols:
-            # normalize non price columns
-            data_window[:, :, nb_pc:] -= self.stats["mean"][None, None, nb_pc:]
-            data_window[:, :, nb_pc:] /= self.stats["std"][None, None, nb_pc:]
-            data_window[:, :, nb_pc:] = np.clip(
-                data_window[:, :, nb_pc:],
-                self.stats["mean"][nb_pc:] - self.stats["std"][nb_pc:] * 10,
-                self.stats["mean"][nb_pc:] + self.stats["std"][nb_pc:] * 10
-            )
+        # if self.scale_extra_cols:
+        #     # normalize non price columns
+        #     data_window[:, :, nb_pc:] -= self.stats["mean"][None, None, nb_pc:]
+        #     data_window[:, :, nb_pc:] /= self.stats["std"][None, None, nb_pc:]
+        #     data_window[:, :, nb_pc:] = np.clip(
+        #         data_window[:, :, nb_pc:],
+        #         self.stats["mean"][nb_pc:] - self.stats["std"][nb_pc:] * 10,
+        #         self.stats["mean"][nb_pc:] + self.stats["std"][nb_pc:] * 10
+        #     )
 
         self.step += 1
         history = data_window
@@ -152,12 +148,8 @@ class DataSrc(object):
         dfs = []
         for i in self.df.columns.levels[0]:
             dfs.append(self.df[i]['close'])
-        # print(i)
-        # print(df_test['JPY_USD']['close'])
         OLPS_df = pd.concat(dfs, axis=1)
         OLPS_df = OLPS_df.as_matrix()
-        # OLPS_low = self.df_olps.index[self.idx]
-        # OLPS_high = self.df_olps.index[self.idx+self.steps-1]
         OLPS_low = self.idx
         OLPS_high = self.idx + self.steps
         return OLPS_df[OLPS_low:OLPS_high, :]
@@ -264,12 +256,11 @@ class PortfolioEnv(gym.Env):
                  trading_cost=0.0025,
                  time_cost=0.00,
                  window_length=50,
-                 input_rf=False,
+                 input='price',
                  norm=None,
                  augment=0.00,
                  output_mode='EIIE',
                  log_dir=None,
-                 scale=True,
                  scale_extra_cols=True,
                  random_reset=True
                  ):
@@ -291,7 +282,7 @@ class PortfolioEnv(gym.Env):
             scale - scales price data by last opening price on each episode (except return)
             scale_extra_cols - scales non price data using mean and std for whole dataset
         """
-        self.src = DataSrc(df=df, steps=steps, input_rf=input_rf, norm=norm, scale=scale, scale_extra_cols=scale_extra_cols,
+        self.src = DataSrc(df=df, steps=steps, input=input, norm=norm, scale_extra_cols=scale_extra_cols,
                            augment=augment, window_length=window_length,
                            random_reset=random_reset)
         self._plot = self._plot2 = self._plot3 = None
@@ -333,7 +324,7 @@ class PortfolioEnv(gym.Env):
         self.observation_space = gym.spaces.Dict({
             'history': gym.spaces.Box(
                 -10,
-                20 if scale else 1,  # if scale=True observed price changes return could be large fractions
+                10,
                 obs_shape
             ),
             'weights': self.action_space
