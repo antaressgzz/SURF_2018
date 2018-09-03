@@ -39,7 +39,7 @@ class AlgoResult(PickleMixin):
         :param B: Weights.
         """
         # set initial values
-        self._fee = 0.00003
+        self._fee = 0.0003
         self._B = B
         self.rf_rate = 0.
         self._X = X

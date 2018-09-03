@@ -16,7 +16,8 @@ class Dqn_agent:
                  memory_size=10000,
                  batch_size=32,
                  save_period=100000,
-                 name='dqn', save=False,
+                 name='dqn',
+                 save=False,
                  GPU=False):
 
         self.epsilon = epsilon
@@ -33,10 +34,9 @@ class Dqn_agent:
         # self.lr = tf.train.exponential_decay(learning_rate=0.01, global_step=self.global_step,
         #                                      decay_steps=learning_rate_decay_step, decay_rate=0.9)
         self.action_num, self.actions = action_discretization(self.asset_num, self.division)
-
         config = tf.ConfigProto()
 
-        if GPU == False:
+        if not GPU:
             os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
         else:
             config.gpu_options.allow_growth = True
@@ -44,11 +44,11 @@ class Dqn_agent:
 
         network_topology['output_num'] = self.action_num
 
-        self.config = network_topology
+        self.network_config = network_topology
         self.initialize_graph()
         self.sess.run(tf.global_variables_initializer())
 
-        if save == True:
+        if save:
             self.save = save
             self.save_period = save_period
             self.name = name
@@ -72,11 +72,11 @@ class Dqn_agent:
 
         # Training network
         with tf.variable_scope('estm_net'):
-            self.q_pred = self.build_graph(self.price_his, self.addi_inputs)
+            self.fc_input, self.q_pred = self.build_graph(self.price_his, self.addi_inputs)
 
         # Target network
         with tf.variable_scope('target_net'):
-            self.tar_pred = self.build_graph(self.price_his_, self.addi_inputs_)
+            _, self.tar_pred = self.build_graph(self.price_his_, self.addi_inputs_)
 
         with tf.variable_scope('q_tar'):
             self.q_target = tf.placeholder(dtype=tf.float32, shape=[None], name='q_target')
@@ -99,38 +99,64 @@ class Dqn_agent:
         self.update_target = [tf.assign(t, l) for t, l in zip(t_params, e_params)]
 
 
-    def build_graph(self, price_his, addi_inputs):
+    def build_graph(self, price_his, addi_input):
+        kernels = self.network_config['kernels']
+        strides = self.network_config['strides']
+        filters = self.network_config['filters']
+        cnn_bias = self.network_config['cnn_bias']
+        fc_size = self.network_config['fc_size']
+        activation = self.network_config['activation']
+        initializer = self.network_config['initializer']
+        regularizer = self.network_config['regularizer']
+        weights_pos = self.network_config['weights_pos']
 
-        cnn_bias = self.config['cnn_bias']
-        fc_bias = self.config['fc_bias']
-        activation = self.config['activation']
-        initializer = self.config['initializer']
-
-        conv1 = tf.layers.conv2d(price_his, filters=16, kernel_size=[1, 8], strides=[1, 4], trainable=True,
-                                 use_bias=cnn_bias, activation=activation,
-                                 kernel_initializer=initializer, padding="VALID", name='conv1')
+        conv1 = tf.layers.conv2d(price_his, filters=filters[0], kernel_size=kernels[0], strides=strides[0], trainable=True,
+                                 use_bias=cnn_bias, activation=activation, kernel_regularizer=regularizer,
+                                 bias_regularizer=regularizer, kernel_initializer=initializer, padding="VALID", name='conv1')
         print(conv1.shape)
-        conv2 = tf.layers.conv2d(conv1, filters=8, kernel_size=[1, 4], strides=[1, 2], trainable=True,
-                                 use_bias=cnn_bias, activation=activation,
-                                 kernel_initializer=initializer, padding="VALID", name='conv2')
+        conv2 = tf.layers.conv2d(conv1, filters=filters[1], kernel_size=kernels[1], strides=strides[1], trainable=True,
+                                 use_bias=cnn_bias, activation=activation, kernel_regularizer=regularizer,
+                                 bias_regularizer=regularizer, kernel_initializer=initializer, padding="VALID", name='conv2')
         print(conv2.shape)
-
-        fc_input = tf.layers.flatten(conv2)
-
-        if fc_bias == True:
-            fc1 = layers.fully_connected(fc_input, num_outputs=512, activation_fn=activation,
-                                         weights_initializer=initializer, trainable=True, scope='fc1')
+        if weights_pos is None:
+            fc_input = tf.layers.flatten(conv2)
+            fc1 = layers.fully_connected(fc_input, num_outputs=fc_size, activation_fn=activation,
+                                         weights_regularizer=regularizer,
+                                         weights_initializer=initializer, biases_regularizer=regularizer,
+                                         trainable=True, scope='fc1')
             output = layers.fully_connected(fc1, num_outputs=self.action_num, activation_fn=activation,
-                                            weights_initializer=initializer, trainable=True, scope='output')
+                                            weights_regularizer=regularizer,
+                                            biases_regularizer=regularizer, weights_initializer=initializer,
+                                            trainable=True, scope='output')
+        elif weights_pos == 0:
+            fc_input = tf.concat([tf.layers.flatten(conv2), addi_input], axis=1)
+            print(fc_input.shape)
+            fc1 = layers.fully_connected(fc_input, num_outputs=fc_size, activation_fn=activation,
+                                         weights_regularizer=regularizer,
+                                         weights_initializer=initializer, biases_regularizer=regularizer,
+                                         trainable=True, scope='fc1')
+            output = layers.fully_connected(fc1, num_outputs=self.action_num, activation_fn=activation,
+                                            weights_regularizer=regularizer,
+                                            biases_regularizer=regularizer, weights_initializer=initializer,
+                                            trainable=True, scope='output')
+        elif weights_pos == 1:
+            fc_input = tf.layers.flatten(conv2)
+            fc1 = layers.fully_connected(fc_input, num_outputs=fc_size, activation_fn=activation,
+                                         weights_regularizer=regularizer,
+                                         weights_initializer=initializer, biases_regularizer=regularizer,
+                                         trainable=True, scope='fc1')
+            fc1_ = tf.concat([fc1, addi_input], axis=1)
+            print(fc1_.shape)
+            output = layers.fully_connected(fc1_, num_outputs=self.action_num, activation_fn=activation,
+                                            weights_regularizer=regularizer,
+                                            biases_regularizer=regularizer, weights_initializer=initializer,
+                                            trainable=True, scope='output')
         else:
-            w1 = tf.get_variable('w1', dtype=tf.float32, initializer=initializer,
-                                shape=[fc_input.shape[1], 512], trainable=True)
-            a1 = activation(tf.matmul(fc_input, w1))
-            w2 = tf.get_variable('w2', dtype=tf.float32, initializer=initializer,
-                                shape=[512, self.action_num], trainable=True)
-            output = tf.matmul(a1, w2)
+            fc_input = None
+            output = None
+            print('Invalid weights_pos.')
 
-        return output
+        return fc_input, output
 
     def initialize_tb(self):
         for v in tf.trainable_variables():
@@ -138,6 +164,7 @@ class Dqn_agent:
         tf.summary.scalar("loss", self.loss),
         tf.summary.histogram("q_values_hist", self.q_pred),
         tf.summary.scalar("max_q_value", tf.reduce_max(self.q_pred))
+        tf.summary.histogram('fc_input', self.fc_input)
         self.merged = tf.summary.merge_all()
         self.writer = tf.summary.FileWriter("logs/train/" + self.name, self.sess.graph)
         self.tensorboard = True
@@ -145,25 +172,26 @@ class Dqn_agent:
     def replay(self):
         obs, action_batch, reward_batch, obs_ = self.memory.sample()
 
-        q_values_next = self.sess.run(self.q_pred, feed_dict={self.price_his: obs_['history']})
+        q_values_next = self.sess.run(self.q_pred, feed_dict={self.price_his: obs_['history'], self.addi_inputs:obs_['weights']})
         best_actions = np.argmax(q_values_next, axis=1)
-        q_values_next_target = self.sess.run(self.tar_pred, feed_dict={self.price_his_: obs_['history']})
+        q_values_next_target = self.sess.run(self.tar_pred, feed_dict={self.price_his_: obs_['history'], self.addi_inputs_:obs_['weights']})
         targets_batch = reward_batch + self.gamma * q_values_next_target[np.arange(len(action_batch)), best_actions]
 
         # Train
         fd = {self.q_target: targets_batch,
               self.price_his: obs['history'],
+              self.addi_inputs: obs['weights'],
               self.a : action_batch}
         _, global_step = self.sess.run([self.train_op, self.global_step], feed_dict=fd)
 
         if global_step % self.update_tar_period == 0:
             self.sess.run(self.update_target)
 
-        if self.tensorboard == True and global_step % 50 == 0:
+        if self.tensorboard and global_step % 75 == 0:
             s = self.sess.run(self.merged, feed_dict=fd)
             self.writer.add_summary(s, global_step)
 
-        if self.save == True and global_step % self.save_period == 0:
+        if self.save and global_step % self.save_period == 0:
             self.saver.save(self.sess, 'logs/checkpoint/' + self.name, global_step=global_step)
 
         if self.epsilon > self.epsilon_min:
@@ -173,10 +201,11 @@ class Dqn_agent:
 
         def action_max():
             action_values = self.sess.run(self.q_pred,
-                        feed_dict={self.price_his: observation['history'][np.newaxis, :, :, :]})  # fctur
+                        feed_dict={self.price_his: observation['history'][np.newaxis, :, :, :],
+                                   self.addi_inputs: observation['weights'][np.newaxis, :]})  # fctur
             return np.argmax(action_values)
 
-        if test == False:
+        if not test:
             if np.random.rand() > self.epsilon:
                 action_idx = action_max()
             else:
@@ -197,7 +226,6 @@ class Dqn_agent:
 
     def get_ave_reward(self):
         return self.memory.get_ave_reward()
-
 
     def restore(self, name):
         self.saver.restore(self.sess, 'logs/checkpoint/' + name)

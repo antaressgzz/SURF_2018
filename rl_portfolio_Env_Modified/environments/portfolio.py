@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class DataSrc(object):
     """Acts as data provider for each new episode."""
 
-    def __init__(self, df, steps=252, input='price', norm=None, scale_extra_cols=True,
+    def __init__(self, df, steps=252, input='price', trade_period=1, norm=None, scale_extra_cols=True,
                  augment=0.00, window_length=50, random_reset=True):
         """
         DataSrc.
@@ -34,14 +34,15 @@ class DataSrc(object):
         augment - fraction to augment the data by
         random_reset - reset to a random time (otherwise continue through time)
         """
-        self.steps = steps + 1
+        self.steps = steps
         self.augment = augment
         self.random_reset = random_reset
+        self.trade_period = trade_period
         self.input = input
         self.norm = norm
         self.scale_extra_cols = scale_extra_cols
         self.window_length = window_length
-        self.idx = self.window_length
+        self.idx = self.window_length + 1
         self.df = df.copy()
 
         # get rid of NaN's
@@ -51,14 +52,19 @@ class DataSrc(object):
 
         # dataframe to matrix
         self.asset_names = df.columns.levels[0].tolist()
+        # print(self.asset_names)
         self.features = df.columns.levels[1].tolist()
+        print('features:', self.features)
         data = df.as_matrix().reshape(
             (len(df), len(self.asset_names), len(self.features)))
         self._data = np.transpose(data, (1, 0, 2))
+        print('data:', self._data.shape)
         self._times = df.index
 
         self.price_columns = self.features
+        print(self.price_columns)
         self.close_pos = self.price_columns.index('close')
+        print('close_pos:', self.close_pos)
         # self.non_price_columns = set(
         #     df.columns.levels[1]) - set(self.price_columns)
 
@@ -71,15 +77,17 @@ class DataSrc(object):
             #     self.stats["mean"].append(x.mean())
             #      = dict(mean=x.mean(), std=x.std())
 
-        self.reset()
+        # self.reset()
 
     def _step(self):
         # get history matrix from dataframe
-        data_window = self.data[:, self.step+1:self.step+1+
+        data_window = self.data[:, self.step*self.trade_period+1:self.step*self.trade_period+1+
                                              self.window_length].copy()
+        # print(self.step*self.trade_period+1+self.window_length)
+        # print('ddddd', data_window[:, -10:, 2])
 
         # (eq.1) prices
-        y1 = data_window[:, -1, self.close_pos] / data_window[:, -2, self.close_pos]
+        y1 = data_window[:, -1, self.close_pos] / data_window[:, -self.trade_period-1, self.close_pos]
         # y1 = self.data[:, self.step+1+self.window_length, 0].copy() / self.data[:, self.step+self.window_length, 0].copy()
         y1 = np.concatenate([[1.0], y1])  # add cash price
 
@@ -92,19 +100,20 @@ class DataSrc(object):
                 data_window[:, :, :nb_pc] /= last_close_price[:,
                                                 np.newaxis, np.newaxis]
             elif self.norm == 'previous':
-                _data_window = self.data[:, self.step:self.step+self.window_length].copy()
+                _data_window = self.data[:, self.step*self.trade_period:self.step*self.trade_period+self.window_length].copy()
                 data_window = data_window / _data_window
             elif self.norm == None:
                 pass
             else:
                 print('Invalid norm.')
         elif self.input == 'rf':
-            _data_window = self.data[:, self.step:self.step+self.window_length].copy()
+            _data_window = self.data[:, self.step*self.trade_period:self.step*self.trade_period+self.window_length].copy()
             data_window = (data_window / _data_window) - 1
-            data_window *= 1000
+            data_window *= 500
             data_window = np.clip(data_window, -1, 1)
-        else:
-            print('Invalid Input.')
+        # print(data_window)
+        # else:
+        #     print('Invalid Input.')
 
         # if self.scale_extra_cols:
         #     # normalize non price columns
@@ -127,18 +136,20 @@ class DataSrc(object):
         # get data for this episode
         if self.random_reset:
             self.idx = np.random.randint(
-                low=self.window_length + 1, high=self._data.shape[1] - self.steps - 2)
+                low=self.window_length + 1, high=self._data.shape[1] - self.steps*self.trade_period - 2)
         else:
             # continue sequentially, before reseting to start
-            if self.idx > (self._data.shape[1] - 2 * self.steps-2):
+            if self.idx > (self._data.shape[1] - 2*self.steps*self.trade_period - 2):
                 self.idx = self.window_length + 1
             else:
-                self.idx += self.steps
+                self.idx += self.steps * self.trade_period
 
         data = self._data[:, self.idx -
-                             self.window_length-1:self.idx+self.steps+1].copy()
+                             self.window_length-1:self.idx+self.steps*self.trade_period+1].copy()
+        # print(data.shape)
+        # print(self.idx)
         self.times = self._times[self.idx -
-                                 self.window_length-1:self.idx+self.steps+1]
+                                 self.window_length-1:self.idx+self.steps*self.trade_period+1]
         # augment data to prevent overfitting
         data += np.random.normal(loc=0, scale=self.augment, size=data.shape)
         self.data = data
@@ -151,8 +162,9 @@ class DataSrc(object):
         OLPS_df = pd.concat(dfs, axis=1)
         OLPS_df = OLPS_df.as_matrix()
         OLPS_low = self.idx
-        OLPS_high = self.idx + self.steps
-        return OLPS_df[OLPS_low:OLPS_high, :]
+        OLPS_high = self.idx + self.steps*self.trade_period
+        idxs = np.linspace(OLPS_low, OLPS_high, num=self.steps, endpoint=False).astype(int)
+        return OLPS_df[idxs]
 
 
 class PortfolioSim(object):
@@ -168,7 +180,7 @@ class PortfolioSim(object):
         self.time_cost = time_cost
         self.steps = steps
         self.asset_names = asset_names
-        self.reset()
+        # self.reset()
 
     def _step(self, w0, y1):
         """
@@ -183,6 +195,8 @@ class PortfolioSim(object):
 
         _p0 = self._p0
         _w0 = self._w0
+        if w0 is None:
+            w0 = _w0
         c1 = self.cost * (np.abs(_w0[1:]-w0[1:])).sum()
         w0_ = (y1 * w0) / np.dot(y1, w0)
         p0_ = _p0 * (1 - c1) * np.dot(w0, y1)
@@ -199,7 +213,7 @@ class PortfolioSim(object):
         rho1 = p0_ / _p0 - 1  # rate of returns
 
         # r1 = np.log((p1 + eps) / (p0 + eps))  # (eq10) log rate of return
-        r1 = np.log(p0_  + eps/ _p0 + eps)
+        r1 = np.log(p0_ / _p0)
 
         # (eq22) immediate reward is log rate of return scaled by episode length
         # reward = r1 / self.steps
@@ -221,6 +235,7 @@ class PortfolioSim(object):
             "portfolio_value": p0_,
             "market_return": y1.mean(),
             "rate_of_return": rho1,
+            "weights": w0,
             "weights_mean": w0.mean(),
             "weights_std": w0.std(),
             "cost": c1,
@@ -254,6 +269,7 @@ class PortfolioEnv(gym.Env):
                  df,
                  steps=256,
                  trading_cost=0.0025,
+                 trade_period=1,
                  time_cost=0.00,
                  window_length=50,
                  input='price',
@@ -282,8 +298,8 @@ class PortfolioEnv(gym.Env):
             scale - scales price data by last opening price on each episode (except return)
             scale_extra_cols - scales non price data using mean and std for whole dataset
         """
-        self.src = DataSrc(df=df, steps=steps, input=input, norm=norm, scale_extra_cols=scale_extra_cols,
-                           augment=augment, window_length=window_length,
+        self.src = DataSrc(df=df, steps=steps, input=input, trade_period=trade_period,
+                           norm=norm, scale_extra_cols=scale_extra_cols, augment=augment, window_length=window_length,
                            random_reset=random_reset)
         self._plot = self._plot2 = self._plot3 = None
         self.output_mode = output_mode
@@ -329,7 +345,7 @@ class PortfolioEnv(gym.Env):
             ),
             'weights': self.action_space
         })
-        self._reset()
+        # self._reset()
 
     def _step(self, action):
         """
@@ -339,16 +355,23 @@ class PortfolioEnv(gym.Env):
         - cn is the portfolio conversion weights see PortioSim._step for description
         """
 
-        logger.debug('action: %s', action)
-        weights = np.clip(action, 0.0, 1.0)
-        weights /= weights.sum() + eps
-        # Sanity checks
-        assert self.action_space.contains(
-            action), 'action should be within %r but is %r' % (self.action_space, action)
-        np.testing.assert_almost_equal(
-            np.sum(weights), 1.0, 3, err_msg='weights should sum to 1. action="%s"' % weights)
+        if action is not None:
+            logger.debug('action: %s', action)
+            weights = np.clip(action, 0.0, 1.0)
+            weights /= weights.sum()
+            # Sanity checks
+            assert self.action_space.contains(
+                action), 'action should be within %r but is %r' % (self.action_space, action)
+            np.testing.assert_almost_equal(
+                np.sum(weights), 1.0, 3, err_msg='weights should sum to 1. action="%s"' % weights)
+        else:
+            weights = action
 
         history, y1, done1 = self.src._step()
+
+        # print('jistory',history[:, -10:, 2])
+        # print('y1:', y1)
+        # print('---------------------')
 
         reward, info, done2 = self.sim._step(weights, y1)
 
@@ -356,7 +379,7 @@ class PortfolioEnv(gym.Env):
         info['market_value'] = np.cumprod(
             [inf["market_return"] for inf in self.infos + [info]])[-1]
         # add dates
-        info['date'] = self.src.times[self.src.step].timestamp()
+        info['date'] = self.src.times[self.src.step*self.src.trade_period+self.src.window_length+1].timestamp()
         info['steps'] = self.src.step
 
         self.infos.append(info)
@@ -371,7 +394,7 @@ class PortfolioEnv(gym.Env):
         elif self.output_mode == 'mlp':
             history = history.flatten()
 
-        return {'history': history, 'weights': weights}, reward, done1 or done2, info
+        return {'history': history, 'weights': info["weights"]}, reward, done1 or done2, info
 
     def _reset(self):
         self.sim.reset()
@@ -439,8 +462,8 @@ class PortfolioEnv(gym.Env):
                 log_dir=self._plot_dir2, labels=all_assets, title='weights', ylabel='weight')
         ys = [df_info['weight_' + name] for name in all_assets]
         self._plot2.update(x, ys)
-        if mode == 'usual':
-            self._plot2.end()
+        # if mode == 'usual':
+        #     self._plot2.end()
 
         # plot portfolio costs
         if not self._plot3:

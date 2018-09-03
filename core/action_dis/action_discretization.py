@@ -17,8 +17,8 @@ def action_discretization(asset_num, division):
         actions[pointer] = action / division
         pointer += 1
     # One additional action
-    # actions[action_num] = None
-    # action_num += 1
+    actions[action_num] = None
+    action_num += 1
     return action_num, actions
 
 def test(asset_num, division):

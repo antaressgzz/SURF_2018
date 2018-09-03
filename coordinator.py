@@ -5,12 +5,11 @@ OLPS_path = os.path.abspath(os.path.dirname(current_path) + os.path.sep + 'OLPS/
 sys.path.append(OLPS_path)
 from OLPS.olps import OLPS
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 class Coordinator:
-    def __init__(self, agent, trade_period):
+    def __init__(self, agent):
         self.agent = agent
-        self.trade_period = trade_period
 
     def train(self, env, total_training_step, replay_period, tensorboard=False):
 
@@ -22,18 +21,23 @@ class Coordinator:
 
         self.total_training_step = total_training_step
         self.replay_period = replay_period
-
         training_step = 0
+        self.rewards = []
+        self.ave_rewards = []
+
         while training_step < self.total_training_step:
             observation = self.env.reset()
-            action_idx, action = self.agent.choose_action(observation)
             while True:
-                if (training_step + 1) % self.trade_period == 0:
-                    action_idx, action = self.agent.choose_action(observation)
+                action_idx, action = self.agent.choose_action(observation)
                 observation_, reward, done, info = self.env.step(action)
+                self.rewards.append(reward)
                 reward *= 100
                 reward = np.clip(reward, -1, 1)
                 self.agent.store(observation, action_idx, reward, observation_)
+                # print('-----------------')
+                # print('observation', observation['history'][0, 1:10, :])
+                # print('observation_', observation_['history'][0, 1:10, :])
+
                 observation = observation_
 
                 if self.agent.start_replay():
@@ -41,25 +45,33 @@ class Coordinator:
                         self.agent.replay()  # update target
                         training_step = self.agent.get_training_step()
                         if (training_step - 1) % 5000 == 0:
+                            num_r = 5000
+                            ave_reward = np.sum(self.rewards[-num_r:]) / num_r
+                            self.ave_rewards.append(ave_reward)
                             print('training_step: {}, epsilon: {:.2f}, ave_reward: {:.2e}'.format(
-                            training_step, self.agent.epsilon, self.agent.get_ave_reward()/100))
+                            training_step, self.agent.epsilon, ave_reward))
+
                 if done:
                     break
 
         print("Successfully trained.")
+        x = np.arange(len(self.ave_rewards))
+        plt.plot(x, self.ave_rewards)
+        plt.show()
 
     def back_test(self, env_test, render_mode='usual'):
-        test_step = 0
         ob = env_test.reset()
-        action_idx, action = self.agent.choose_action(ob, test=True)
+#         print(ob['history'][0, -10:, 2])
+#         print(self.agent.action_values(ob))
+        rewards = 0
         while True:
-            if (test_step + 1) % self.trade_period == 0:
-                action_idx, action = self.agent.choose_action(ob, test=True)
+            action_idx, action = self.agent.choose_action(ob, test=True)
             ob, reward, done, _ = env_test.step(action)
-            test_step += 1
+            rewards += reward
             if done:
                 break
 
+        print('total rewards:', rewards)
         df_info = env_test.return_df()
         df_olps = env_test.OLPS_data()
         olps = OLPS(df_olps=df_olps, df_info=df_info, algo="OLMAR,ONS")
