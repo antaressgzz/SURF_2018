@@ -32,7 +32,7 @@ class Coordinator:
                 observation_, reward, done, info = self.env.step(action)
                 self.rewards.append(reward)
                 reward *= 100
-                reward = np.clip(reward, -1, 1)
+                # reward = np.clip(reward, -1, 1)
                 self.agent.store(observation, action_idx, reward, observation_)
                 # print('-----------------')
                 # print('observation', observation['history'][0, 1:10, :])
@@ -74,7 +74,7 @@ class Coordinator:
         print('total rewards:', rewards)
         df_info = env_test.return_df()
         df_olps = env_test.OLPS_data()
-        olps = OLPS(df_olps=df_olps, df_info=df_info, algo="OLMAR,ONS")
+        olps = OLPS(df_olps=df_olps, df_info=df_info, algo="BAH,BestSoFar")
         olps.plot()
         env_test.render(render_mode)
         sharp, maxDD = env_test.return_SD()

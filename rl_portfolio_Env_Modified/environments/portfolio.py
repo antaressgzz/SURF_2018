@@ -110,7 +110,7 @@ class DataSrc(object):
             _data_window = self.data[:, self.step*self.trade_period:self.step*self.trade_period+self.window_length].copy()
             data_window = (data_window / _data_window) - 1
             data_window *= 500
-            data_window = np.clip(data_window, -1, 1)
+            # data_window = np.clip(data_window, -1, 1)
         # print(data_window)
         # else:
         #     print('Invalid Input.')
