@@ -5,8 +5,8 @@ from rl_portfolio_Env_Modified.environments import PortfolioEnv
 import tensorflow as tf
 import numpy as np
 
-df_train = pd.read_hdf('./data/forex_3f_4.hf', key='train')
-df_test = pd.read_hdf('./data/forex_3f_4.hf', key='test')
+df_train = pd.read_hdf('./data/csvDocu/30M/forex_3f_30m.hf', key='train')
+df_test = pd.read_hdf('./data/csvDocu/30M/forex_3f_30m.hf', key='test')
 
 division = 4
 gamma = 0
@@ -64,7 +64,10 @@ env = PortfolioEnv(df_train,
                    norm=None,
                    random_reset=True)
 
-coo.train(env, total_training_step, replay_period, True)
+print(env.src.df.head())
+
+
+# coo.train(env, total_training_step, replay_period, True)
 
 env_test = PortfolioEnv(df_test,
                    steps=1000,
@@ -75,4 +78,7 @@ env_test = PortfolioEnv(df_test,
                    norm=None,
                    random_reset=False)
 
-coo.back_test(env_test, 'usual')
+print(env_test.src.df.head())
+
+
+# coo.back_test(env_test, 'usual')
