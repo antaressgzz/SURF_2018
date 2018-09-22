@@ -6,7 +6,7 @@ import time
 
 class test():
     
-    def __init__(self,s, e, i):
+    def __init__(self,s, e, i, g,p):
         global hostname, port, ssl, ID, token
         
         hostname = "api-fxpractice.oanda.com"
@@ -19,9 +19,9 @@ class test():
         start = s
         end = e
         instrument = i
-        granularity = "H8"
+        granularity = g
 
-        path = str('year/'+instrument+'_h8.db')
+        path = p
         # print(path)
         self.init_db(path)
         #insert_test(path)
@@ -80,7 +80,7 @@ class test():
         #    kwargs['smooth'] = True
         #    kwargs['fromTime'] = start
         #    kwargs['toTime'] = end
-        response = api.instrument.candles(instrument, price="M", granularity="H8", smooth=True, fromTime=start, toTime=end)
+        response = api.instrument.candles(instrument, price="M", granularity=granularity, smooth=True, fromTime=start, toTime=end)
     
         if response.status != 200:
             # print(response)
