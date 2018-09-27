@@ -31,7 +31,7 @@ class Coordinator:
                 action_idx, action = self.agent.choose_action(observation)
                 observation_, reward, done, info = self.env.step(action)
                 self.rewards.append(reward)
-                reward *= 100
+                reward *= 1000
                 # reward = np.clip(reward, -1, 1)
                 self.agent.store(observation, action_idx, reward, observation_)
                 # print('-----------------')
@@ -39,8 +39,9 @@ class Coordinator:
                 # print('observation_', observation_['history'][0, 1:10, :])
 
                 observation = observation_
-
                 if self.agent.start_replay():
+                    # if training_step % 500 == 0:
+                    #     print(reward)
                     if self.agent.memory_cnt() % self.replay_period == 0:
                         self.agent.replay()  # update target
                         training_step = self.agent.get_training_step()
@@ -56,7 +57,11 @@ class Coordinator:
 
         print("Successfully trained.")
         x = np.arange(len(self.ave_rewards))
-        plt.plot(x, self.ave_rewards)
+        fig, ax = plt.subplots()
+        ax.plot(x, self.ave_rewards)
+        ax.grid(True, which='both')
+        ax.axhline(y=0, color='k')
+        ax.axvline(x=0, color='k')
         plt.show()
 
     def back_test(self, env_test, render_mode='usual'):

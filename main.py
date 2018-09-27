@@ -5,12 +5,13 @@ from rl_portfolio_Env_Modified.environments import PortfolioEnv
 import tensorflow as tf
 import numpy as np
 
-df_train = pd.read_hdf('./data/csvDocu/30M/forex_3f_30m.hf', key='train')
-df_test = pd.read_hdf('./data/csvDocu/30M/forex_3f_30m.hf', key='test')
+df_train = pd.read_hdf('./data/data_raw/forex4_3f_30M.hf', key='train')
+df_test = pd.read_hdf('./data/data_raw/forex4_3f_30M.hf', key='test')
+
 
 division = 4
 gamma = 0
-name = '2204'
+name = '2603'
 total_training_step = 200000
 replay_period = 4
 save_period = 50000
@@ -18,20 +19,20 @@ batch_size = 32
 GPU = False
 asset_num = 5
 feature_num = 3
-window_length = 50
+window_length = 500
 trade_period = 1
 
 network_config = {
         'type':'cnn_fc',
-        'kernels':[[1, 5], [1, 4]],
-        'strides':[[1, 3], [1, 2]],
-        'filters':[8, 8],
+        'kernels':[[1, 8], [1, 4]],
+        'strides':[[1, 4], [1, 2]],
+        'filters':[6, 4],
         'cnn_bias': True,
         'regularizer': None,
         'activation': tf.nn.selu,
         'fc_size': 256,
-        'b_initializer':tf.constant_initializer(0),
-        'w_initializer':tf.truncated_normal_initializer(stddev=0.01),
+        'b_initializer':tf.constant_initializer(0.1),
+        'w_initializer':tf.truncated_normal_initializer(stddev=0.1),
         'weights_pos': None
     }
 
@@ -64,13 +65,11 @@ env = PortfolioEnv(df_train,
                    norm=None,
                    random_reset=True)
 
-print(env.src.df.head())
-
 
 # coo.train(env, total_training_step, replay_period, True)
-
-env_test = PortfolioEnv(df_test,
-                   steps=1000,
+coo.restore('2601-50000')
+env_test = PortfolioEnv(df_train,
+                   steps=3000,
                    trading_cost=0.0,
                    trade_period=trade_period,
                    window_length=window_length,
@@ -78,7 +77,5 @@ env_test = PortfolioEnv(df_test,
                    norm=None,
                    random_reset=False)
 
-print(env_test.src.df.head())
 
-
-# coo.back_test(env_test, 'usual')
+coo.back_test(env_test, 'usual')
