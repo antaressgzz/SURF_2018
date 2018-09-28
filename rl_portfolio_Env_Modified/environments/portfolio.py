@@ -45,6 +45,8 @@ class DataSrc(object):
         self.idx = self.window_length + 1
         self.df = df.copy()
 
+        self.reboot = True
+
         # get rid of NaN's
         df = df.copy()
         df.replace(np.nan, 0, inplace=True)
@@ -134,15 +136,19 @@ class DataSrc(object):
     def reset(self):
         self.step = 0
         # get data for this episode
-        if self.random_reset:
-            self.idx = np.random.randint(
-                low=self.window_length + 1, high=self._data.shape[1] - self.steps*self.trade_period - 2)
-        else:
-            # continue sequentially, before reseting to start
-            if self.idx > (self._data.shape[1] - 2*self.steps*self.trade_period - 2):
-                self.idx = self.window_length + 1
+        if not self.reboot:
+
+            if self.random_reset:
+                self.idx = np.random.randint(
+                    low=self.window_length + 1, high=self._data.shape[1] - self.steps*self.trade_period - 2)
             else:
-                self.idx += self.steps * self.trade_period
+                # continue sequentially, before reseting to start
+                if self.idx > (self._data.shape[1] - 2*self.steps*self.trade_period - 2):
+                    self.idx = self.window_length + 1
+                else:
+                    self.idx += self.steps * self.trade_period
+        else:
+            self.reboot = False
 
         data = self._data[:, self.idx -
                              self.window_length-1:self.idx+self.steps*self.trade_period+1].copy()

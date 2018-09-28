@@ -5,21 +5,21 @@ from rl_portfolio_Env_Modified.environments import PortfolioEnv
 import tensorflow as tf
 import numpy as np
 
-df_train = pd.read_hdf('./data/data_raw/forex4_3f_30M.hf', key='train')
-df_test = pd.read_hdf('./data/data_raw/forex4_3f_30M.hf', key='test')
+df_train = pd.read_hdf('./data/data_raw/forex_3f_2.hf', key='train')
+df_test = pd.read_hdf('./data/data_raw/forex_3f_2.hf', key='test')
 
 
 division = 4
 gamma = 0
-name = '2603'
-total_training_step = 200000
+name = '2802'
+total_training_step = 120000
 replay_period = 4
-save_period = 50000
+save_period = 30000
 batch_size = 32
 GPU = False
 asset_num = 5
 feature_num = 3
-window_length = 500
+window_length = 52
 trade_period = 1
 
 network_config = {
@@ -67,9 +67,9 @@ env = PortfolioEnv(df_train,
 
 
 # coo.train(env, total_training_step, replay_period, True)
-coo.restore('2601-50000')
-env_test = PortfolioEnv(df_train,
-                   steps=3000,
+coo.restore('2802-30000')
+env_test = PortfolioEnv(df_test,
+                   steps=2000,
                    trading_cost=0.0,
                    trade_period=trade_period,
                    window_length=window_length,
