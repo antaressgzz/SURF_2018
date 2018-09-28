@@ -86,7 +86,8 @@ class Dqn_agent:
             self.q_estm_wa = tf.gather_nd(params=self.q_pred, indices=a_indices)
 
         with tf.name_scope('loss'):
-            error = tf.clip_by_value(self.q_target-self.q_estm_wa, -1, 1)
+            # error = tf.clip_by_value(self.q_target-self.q_estm_wa, -1, 1)
+            error = self.q_target-self.q_estm_wa
             square = tf.square(error)
             self.loss = tf.reduce_mean(square)
 
@@ -128,35 +129,44 @@ class Dqn_agent:
             print(fc_input.shape)
             fc1 = layers.fully_connected(fc_input, num_outputs=fc_size, activation_fn=activation,
                                          weights_regularizer=regularizer,
-                                         weights_initializer=w_initializer, biases_regularizer=regularizer,
+                                         weights_initializer=w_initializer,
+                                         biases_regularizer=regularizer,
+                                         biases_initializer=b_initializer,
                                          trainable=True, scope='fc1')
             print(fc1.shape)
-            output = layers.fully_connected(fc1, num_outputs=self.action_num, activation_fn=activation,
+            output = layers.fully_connected(fc1, num_outputs=self.action_num, activation_fn=None,
                                             weights_regularizer=regularizer,
-                                            biases_regularizer=regularizer, weights_initializer=w_initializer,
+                                            biases_regularizer=regularizer,
+                                            weights_initializer=w_initializer,
                                             trainable=True, scope='output')
         elif weights_pos == 0:
             fc_input = tf.concat([tf.layers.flatten(conv2), addi_input], axis=1)
             print(fc_input.shape)
             fc1 = layers.fully_connected(fc_input, num_outputs=fc_size, activation_fn=activation,
                                          weights_regularizer=regularizer,
-                                         weights_initializer=w_initializer, biases_regularizer=regularizer,
+                                         weights_initializer=w_initializer,
+                                         biases_regularizer=regularizer,
+                                         biases_initializer=b_initializer,
                                          trainable=True, scope='fc1')
-            output = layers.fully_connected(fc1, num_outputs=self.action_num, activation_fn=activation,
+            output = layers.fully_connected(fc1, num_outputs=self.action_num, activation_fn=None,
                                             weights_regularizer=regularizer,
-                                            biases_regularizer=regularizer, weights_initializer=w_initializer,
+                                            biases_regularizer=regularizer,
+                                            weights_initializer=w_initializer,
                                             trainable=True, scope='output')
         elif weights_pos == 1:
             fc_input = tf.layers.flatten(conv2)
             fc1 = layers.fully_connected(fc_input, num_outputs=fc_size, activation_fn=activation,
                                          weights_regularizer=regularizer,
-                                         weights_initializer=w_initializer, biases_regularizer=regularizer,
+                                         weights_initializer=w_initializer,
+                                         biases_regularizer=regularizer,
+                                         biases_initializer=b_initializer,
                                          trainable=True, scope='fc1')
             fc1_ = tf.concat([fc1, addi_input], axis=1)
             print(fc1_.shape)
-            output = layers.fully_connected(fc1_, num_outputs=self.action_num, activation_fn=activation,
+            output = layers.fully_connected(fc1_, num_outputs=self.action_num, activation_fn=None,
                                             weights_regularizer=regularizer,
-                                            biases_regularizer=regularizer, weights_initializer=w_initializer,
+                                            biases_regularizer=regularizer,
+                                            weights_initializer=w_initializer,
                                             trainable=True, scope='output')
         else:
             fc_input = None
