@@ -46,7 +46,7 @@ class Coordinator:
                         self.agent.replay()  # update target
                         training_step = self.agent.get_training_step()
                         if (training_step - 1) % 5000 == 0:
-                            num_r = 5000
+                            num_r = 50000
                             ave_reward = np.sum(self.rewards[-num_r:]) / num_r
                             self.ave_rewards.append(ave_reward)
                             print('training_step: {}, epsilon: {:.2f}, ave_reward: {:.2e}'.format(

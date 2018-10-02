@@ -11,7 +11,7 @@ import gym.spaces
 
 from ..config import eps
 from ..data.utils import normalize, random_shift, scale_to_start
-from ..util import MDD as max_drawdown, sharpe, softmax, sigmoid
+from ..util import MDD as max_drawdown, sharpe, talib_features
 from ..callbacks.LivePlot import LivePlot
 from ..callbacks.notebook_plot import LivePlotNotebook
 
@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 class DataSrc(object):
     """Acts as data provider for each new episode."""
 
-    def __init__(self, df, steps=252, input='price', trade_period=1, norm=None, scale_extra_cols=True,
+    def __init__(self, df, steps=252, input='price', trade_period=1, norm=None,
+                 talib=False, scale_extra_cols=True,
                  augment=0.00, window_length=50, random_reset=True):
         """
         DataSrc.
@@ -40,6 +41,7 @@ class DataSrc(object):
         self.trade_period = trade_period
         self.input = input
         self.norm = norm
+        self.talib = talib
         self.scale_extra_cols = scale_extra_cols
         self.window_length = window_length
         self.idx = self.window_length + 1
@@ -59,14 +61,21 @@ class DataSrc(object):
         print('features:', self.features)
         data = df.as_matrix().reshape(
             (len(df), len(self.asset_names), len(self.features)))
-        self._data = np.transpose(data, (1, 0, 2))
-        print('data:', self._data.shape)
-        self._times = df.index
-
-        self.price_columns = self.features
+        self.price_columns = self.features[:3]
         print(self.price_columns)
         self.close_pos = self.price_columns.index('close')
         print('close_pos:', self.close_pos)
+        self._data = np.transpose(data, (1, 0, 2))
+
+        if self.talib == False:
+            print('data:', self._data.shape)
+            self._times = df.index
+        else:
+            talibs_data = talib_features(self._data[:, :, self.close_pos].copy())
+            self._data = np.concatenate([self._data[:, 50:, :], talibs_data], axis=2)
+            print('data:', self._data.shape)
+            self._times = df.index[50:]
+
         # self.non_price_columns = set(
         #     df.columns.levels[1]) - set(self.price_columns)
 
@@ -99,8 +108,7 @@ class DataSrc(object):
         if self.input == 'price':
             if self.norm == 'latest_close':
                 last_close_price = data_window[:, -1, self.close_pos]
-                data_window[:, :, :nb_pc] /= last_close_price[:,
-                                                np.newaxis, np.newaxis]
+                data_window[:, :, :nb_pc] /= last_close_price[:, np.newaxis, np.newaxis]
             elif self.norm == 'previous':
                 _data_window = self.data[:, self.step*self.trade_period:self.step*self.trade_period+self.window_length].copy()
                 data_window = data_window / _data_window
@@ -152,13 +160,14 @@ class DataSrc(object):
 
         data = self._data[:, self.idx -
                              self.window_length-1:self.idx+self.steps*self.trade_period+1].copy()
+        self.data = data
+
         # print(data.shape)
         # print(self.idx)
         self.times = self._times[self.idx -
                                  self.window_length-1:self.idx+self.steps*self.trade_period+1]
         # augment data to prevent overfitting
         # data += np.random.normal(loc=0, scale=self.augment, size=data.shape)
-        self.data = data
 
     def OLPS_data(self):
 
@@ -278,6 +287,7 @@ class PortfolioEnv(gym.Env):
                  trade_period=1,
                  time_cost=0.00,
                  window_length=50,
+                 talib=False,
                  input='price',
                  norm=None,
                  augment=0.00,
@@ -304,7 +314,7 @@ class PortfolioEnv(gym.Env):
             scale - scales price data by last opening price on each episode (except return)
             scale_extra_cols - scales non price data using mean and std for whole dataset
         """
-        self.src = DataSrc(df=df, steps=steps, input=input, trade_period=trade_period,
+        self.src = DataSrc(df=df, steps=steps, input=input, trade_period=trade_period, talib=talib,
                            norm=norm, scale_extra_cols=scale_extra_cols, augment=augment, window_length=window_length,
                            random_reset=random_reset)
         self._plot = self._plot2 = self._plot3 = None

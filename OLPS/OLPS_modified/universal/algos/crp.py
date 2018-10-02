@@ -23,17 +23,20 @@ class CRP(Algo):
 
 
     def step(self, x, last_b):
-        # init b to default if necessary
-        if self.b is None:
-            self.b = np.ones(len(x)) / len(x)
+        # init b to default if necessary 
+        
+        self.b = np.ones(len(x)) / len(x)
+        print(self.b)
         return self.b
 
 
-    def weights(self, X):
+    def init_weights(self, m):
         if self.b is None:
-            return np.ones(X.shape) / X.shape[1]
+            return np.ones(m) / m
+            
         else:
-            return np.repeat([self.b], X.shape[0], axis=0)
+            
+            return np.ones(m) / m
 
 
     @classmethod

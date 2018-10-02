@@ -5,14 +5,15 @@ from rl_portfolio_Env_Modified.environments import PortfolioEnv
 import tensorflow as tf
 import numpy as np
 
-df_train = pd.read_hdf('./data/data_raw/forex_3f_2.hf', key='train')
-df_test = pd.read_hdf('./data/data_raw/forex_3f_2.hf', key='test')
+df_train = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_3f_1018_30m.hf', key='train')
+df_test = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_3f_1018_30m.hf', key='test')
 
 
 division = 4
 gamma = 0
-name = '2802'
-total_training_step = 120000
+name = '0101'
+print('model:',name)
+total_training_step = 240000
 replay_period = 4
 save_period = 30000
 batch_size = 32
@@ -57,25 +58,27 @@ agent = Dqn_agent(asset_num,
 coo = Coordinator(agent)
 
 env = PortfolioEnv(df_train,
-                   steps=100,
+                   steps=1000,
                    trading_cost=0.0,
                    trade_period=trade_period,
                    window_length=window_length,
+                   talib=False,
                    input='rf',
-                   norm=None,
+                   norm='None',
                    random_reset=True)
 
 
 # coo.train(env, total_training_step, replay_period, True)
-coo.restore('2802-30000')
+# coo.restore('0102-240000')
+
 env_test = PortfolioEnv(df_test,
-                   steps=2000,
+                   steps=6000,
                    trading_cost=0.0,
                    trade_period=trade_period,
                    window_length=window_length,
+                   talib=False,
                    input='rf',
-                   norm=None,
+                   norm='None',
                    random_reset=False)
-
 
 coo.back_test(env_test, 'usual')
