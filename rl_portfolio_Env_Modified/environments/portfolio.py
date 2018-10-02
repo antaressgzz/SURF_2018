@@ -63,9 +63,13 @@ class DataSrc(object):
             (len(df), len(self.asset_names), len(self.features)))
         self.price_columns = self.features[:3]
         print(self.price_columns)
+        self.nb_pc = 3
         self.close_pos = self.price_columns.index('close')
         print('close_pos:', self.close_pos)
         self._data = np.transpose(data, (1, 0, 2))
+
+        if scale_extra_cols:
+            self._data[:, :, self.nb_pc:] /= 2000
 
         if self.talib == False:
             print('data:', self._data.shape)
@@ -78,6 +82,8 @@ class DataSrc(object):
 
         # self.non_price_columns = set(
         #     df.columns.levels[1]) - set(self.price_columns)
+
+
 
         # Stats to let us normalize non price columns
         # if scale_extra_cols:
@@ -103,23 +109,25 @@ class DataSrc(object):
         y1 = np.concatenate([[1.0], y1])  # add cash price
 
         # (eq 18) X: prices are divided by close price
-        nb_pc = len(self.price_columns)
+
 
         if self.input == 'price':
             if self.norm == 'latest_close':
                 last_close_price = data_window[:, -1, self.close_pos]
-                data_window[:, :, :nb_pc] /= last_close_price[:, np.newaxis, np.newaxis]
+                data_window[:, :, :self.nb_pc] /= last_close_price[:, np.newaxis, np.newaxis]
             elif self.norm == 'previous':
-                _data_window = self.data[:, self.step*self.trade_period:self.step*self.trade_period+self.window_length].copy()
-                data_window = data_window / _data_window
+                _data_window = self.data[:,
+                               self.step*self.trade_period:self.step*self.trade_period+self.window_length, :self.nb_pc].copy()
+                data_window[:, :, :self.nb_pc] /= _data_window
             elif self.norm == None:
                 pass
             else:
                 print('Invalid norm.')
         elif self.input == 'rf':
-            _data_window = self.data[:, self.step*self.trade_period:self.step*self.trade_period+self.window_length].copy()
-            data_window = (data_window / _data_window) - 1
-            data_window *= 500
+            _data_window = self.data[:,
+                           self.step*self.trade_period:self.step*self.trade_period+self.window_length, :self.nb_pc].copy()
+            data_window[:, :, :self.nb_pc] = data_window[:, :, :self.nb_pc] / _data_window - 1
+            data_window[:, :, :self.nb_pc] *= 500
             # data_window = np.clip(data_window, -1, 1)
         # print(data_window)
         # else:
@@ -158,9 +166,8 @@ class DataSrc(object):
         else:
             self.reboot = False
 
-        data = self._data[:, self.idx -
+        self.data = self._data[:, self.idx -
                              self.window_length-1:self.idx+self.steps*self.trade_period+1].copy()
-        self.data = data
 
         # print(data.shape)
         # print(self.idx)
