@@ -11,7 +11,7 @@ df_test = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_3f_1018_30m.hf', key='test')
 
 division = 4
 gamma = 0
-name = '0101'
+name = '0201'
 print('model:',name)
 total_training_step = 240000
 replay_period = 4
@@ -25,13 +25,13 @@ trade_period = 1
 
 network_config = {
         'type':'cnn_fc',
-        'kernels':[[1, 8], [1, 4]],
-        'strides':[[1, 4], [1, 2]],
-        'filters':[6, 4],
+        'kernels':[[1, 3], [1, 3], [1, 3]],
+        'strides':[[1, 1], [1, 1], [1, 1]],
+        'filters':[6, 8, 10],
         'cnn_bias': True,
         'regularizer': None,
         'activation': tf.nn.selu,
-        'fc_size': 256,
+        'fc_size': 512,
         'b_initializer':tf.constant_initializer(0.1),
         'w_initializer':tf.truncated_normal_initializer(stddev=0.1),
         'weights_pos': None
@@ -68,7 +68,7 @@ env = PortfolioEnv(df_train,
                    random_reset=True)
 
 
-# coo.train(env, total_training_step, replay_period, True)
+coo.train(env, total_training_step, replay_period, True)
 # coo.restore('0102-240000')
 
 env_test = PortfolioEnv(df_test,
@@ -80,5 +80,6 @@ env_test = PortfolioEnv(df_test,
                    input='rf',
                    norm='None',
                    random_reset=False)
+
 
 coo.back_test(env_test, 'usual')
