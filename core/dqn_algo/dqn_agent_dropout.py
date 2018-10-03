@@ -10,7 +10,9 @@ from core.config import network_config
 class Dqn_agent:
     def __init__(self, asset_num, division, feature_num, gamma,
                  network_topology=network_config['cnn_fc'],
-                 epsilon=1, epsilon_Min=0.1, epsilon_decay_period=100000,
+                 epsilon=1, epsilon_Min=0.1,
+                 dropout=0.5,
+                 epsilon_decay_period=100000,
                  update_tar_period=1000,
                  history_length=50,
                  memory_size=10000,
@@ -23,6 +25,7 @@ class Dqn_agent:
         self.epsilon = epsilon
         self.epsilon_min = epsilon_Min
         self.epsilon_decay_period = epsilon_decay_period
+        self.dropout = dropout
         self.asset_num = asset_num
         self.division = division
         self.gamma = gamma
@@ -69,6 +72,8 @@ class Dqn_agent:
         self.addi_inputs_ = tf.placeholder(dtype=tf.float32, shape=[None, self.asset_num], name='addi_inputs_')
         self.r = tf.placeholder(dtype=tf.float32, shape=[None, ], name='r')
         self.a = tf.placeholder(dtype=tf.int32, shape=[None, ], name='a')
+        self.keep_prob = tf.placeholder(tf.float32)
+
 
         # Training network
         with tf.variable_scope('estm_net'):
@@ -141,17 +146,14 @@ class Dqn_agent:
                                      biases_regularizer=regularizer,
                                      biases_initializer=b_initializer,
                                      trainable=True, scope='fc1')
-
-
         print('fc1:', fc1.shape)
+        fc1 = tf.nn.dropout(fc1, self.keep_prob)
+
         output = layers.fully_connected(fc1, num_outputs=self.action_num, activation_fn=None,
                                         weights_regularizer=regularizer,
                                         biases_regularizer=regularizer,
                                         weights_initializer=w_initializer,
                                         trainable=True, scope='output')
-
-
-
 
         return fc_input, output
 
@@ -169,16 +171,19 @@ class Dqn_agent:
     def replay(self):
         obs, action_batch, reward_batch, obs_ = self.memory.sample()
 
-        q_values_next = self.sess.run(self.q_pred, feed_dict={self.price_his: obs_['history'], self.addi_inputs:obs_['weights']})
+        q_values_next = self.sess.run(self.q_pred, feed_dict={self.price_his: obs_['history'], self.addi_inputs:obs_['weights'],
+                                                              self.keep_prob: self.dropout})
         best_actions = np.argmax(q_values_next, axis=1)
-        q_values_next_target = self.sess.run(self.tar_pred, feed_dict={self.price_his_: obs_['history'], self.addi_inputs_:obs_['weights']})
+        q_values_next_target = self.sess.run(self.tar_pred, feed_dict={self.price_his_: obs_['history'], self.addi_inputs_:obs_['weights'],
+                                                                       self.keep_prob: self.dropout})
         targets_batch = reward_batch + self.gamma * q_values_next_target[np.arange(len(action_batch)), best_actions]
 
         # Train
         fd = {self.q_target: targets_batch,
               self.price_his: obs['history'],
               self.addi_inputs: obs['weights'],
-              self.a : action_batch}
+              self.a : action_batch,
+              self.keep_prob: self.dropout}
         _, global_step = self.sess.run([self.train_op, self.global_step], feed_dict=fd)
 
         if global_step % self.update_tar_period == 0:
@@ -199,7 +204,8 @@ class Dqn_agent:
         def action_max():
             action_values = self.sess.run(self.q_pred,
                         feed_dict={self.price_his: observation['history'][np.newaxis, :, :, :],
-                                   self.addi_inputs: observation['weights'][np.newaxis, :]})  # fctur
+                                   self.addi_inputs: observation['weights'][np.newaxis, :],
+                                   self.keep_prob: 1})  # fctur
             return np.argmax(action_values)
 
         if not test:
@@ -213,6 +219,7 @@ class Dqn_agent:
         action_weights = self.actions[action_idx]
 
         return action_idx, action_weights
+
 
     def store(self, ob, a, r, ob_):
         self.memory.store(ob, a, r, ob_)
