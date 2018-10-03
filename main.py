@@ -1,5 +1,5 @@
 from coordinator import Coordinator
-from core.dqn_algo.dqn_agent import Dqn_agent
+from core.dqn_algo.dqn_agent_fee import Dqn_agent
 import pandas as pd
 from rl_portfolio_Env_Modified.environments import PortfolioEnv
 import tensorflow as tf
@@ -8,19 +8,18 @@ import numpy as np
 df_train = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_3f_1018_30m.hf', key='train')
 df_test = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_3f_1018_30m.hf', key='test')
 
-
 division = 4
-gamma = 0
-name = '0201'
+gamma = 0.9
+name = '0301'
 print('model:',name)
-total_training_step = 240000
+total_training_step = 300000
 replay_period = 4
-save_period = 30000
+save_period = 50000
 batch_size = 32
 GPU = False
 asset_num = 5
 feature_num = 3
-window_length = 52
+window_length = 50
 trade_period = 1
 
 network_config = {
@@ -59,7 +58,7 @@ coo = Coordinator(agent)
 
 env = PortfolioEnv(df_train,
                    steps=1000,
-                   trading_cost=0.0,
+                   trading_cost=0.00007,
                    trade_period=trade_period,
                    window_length=window_length,
                    talib=False,
@@ -72,14 +71,13 @@ coo.train(env, total_training_step, replay_period, True)
 # coo.restore('0102-240000')
 
 env_test = PortfolioEnv(df_test,
-                   steps=6000,
-                   trading_cost=0.0,
-                   trade_period=trade_period,
-                   window_length=window_length,
-                   talib=False,
-                   input='rf',
-                   norm='None',
-                   random_reset=False)
-
+                       steps=3000,
+                       trading_cost=0.00007,
+                       trade_period=trade_period,
+                       window_length=window_length,
+                       talib=False,
+                       input='rf',
+                       norm= None,
+                       random_reset=False)
 
 coo.back_test(env_test, 'usual')
