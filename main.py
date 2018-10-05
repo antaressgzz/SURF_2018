@@ -1,36 +1,37 @@
 from coordinator import Coordinator
-from core.dqn_algo.dqn_agent_fee import Dqn_agent
+from core.dqn_algo.dqn_agent import Dqn_agent
 import pandas as pd
 from rl_portfolio_Env_Modified.environments import PortfolioEnv
 import tensorflow as tf
 import numpy as np
+# %matplotlib inline
 
-df_train = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_3f_1018_30m.hf', key='train')
-df_test = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_3f_1018_30m.hf', key='test')
+df_train = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1018_30m.hf', key='train')
+df_test = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1018_30m.hf', key='test')
 
 division = 4
-gamma = 0.9
-name = '0301'
+gamma = 0
+name = '0305'
 print('model:',name)
-total_training_step = 300000
+total_training_step = 180000
 replay_period = 4
-save_period = 50000
+save_period = 30000
 batch_size = 32
 GPU = False
 asset_num = 5
-feature_num = 3
-window_length = 50
+feature_num = 4
+window_length = 10
 trade_period = 1
 
 network_config = {
         'type':'cnn_fc',
         'kernels':[[1, 3], [1, 3], [1, 3]],
         'strides':[[1, 1], [1, 1], [1, 1]],
-        'filters':[6, 8, 10],
+        'filters':[3, 4, 5],
         'cnn_bias': True,
         'regularizer': None,
         'activation': tf.nn.selu,
-        'fc_size': 512,
+        'fc_size': 256,
         'b_initializer':tf.constant_initializer(0.1),
         'w_initializer':tf.truncated_normal_initializer(stddev=0.1),
         'weights_pos': None
@@ -58,26 +59,33 @@ coo = Coordinator(agent)
 
 env = PortfolioEnv(df_train,
                    steps=1000,
-                   trading_cost=0.00007,
+                   trading_cost=0.0,
                    trade_period=trade_period,
                    window_length=window_length,
                    talib=False,
+                   augment=0.00005,
                    input='rf',
-                   norm='None',
+                   norm=None,
                    random_reset=True)
 
 
-coo.train(env, total_training_step, replay_period, True)
-# coo.restore('0102-240000')
+# coo.train(env, total_training_step, replay_period, True)
+# coo.restore('0305-150000')
 
 env_test = PortfolioEnv(df_test,
-                       steps=3000,
-                       trading_cost=0.00007,
-                       trade_period=trade_period,
-                       window_length=window_length,
-                       talib=False,
-                       input='rf',
-                       norm= None,
-                       random_reset=False)
+                   steps=8000,
+                   trading_cost=0.0,
+                   trade_period=trade_period,
+                   window_length=window_length,
+                   talib=False,
+                   augment=0.00005,
+                   input='price',
+                   norm=None,
+                   random_reset=False)
 
-coo.back_test(env_test, 'usual')
+ob = env_test.reset()
+for ii in range(5):
+    print(ob['history'][:, :5, :])
+    ob, r, d, i = env_test.step(np.ones(5)/5)
+
+# coo.back_test(env_test, 'usual')

@@ -13,7 +13,7 @@ class Dqn_agent:
                  epsilon=1, epsilon_Min=0.1,
                  dropout=0.5,
                  epsilon_decay_period=100000,
-                 update_tar_period=1000,
+                 update_tar_period=3000,
                  history_length=50,
                  memory_size=10000,
                  batch_size=32,

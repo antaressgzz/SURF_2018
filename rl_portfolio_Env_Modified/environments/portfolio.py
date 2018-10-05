@@ -174,7 +174,10 @@ class DataSrc(object):
         self.times = self._times[self.idx -
                                  self.window_length-1:self.idx+self.steps*self.trade_period+1]
         # augment data to prevent overfitting
-        # data += np.random.normal(loc=0, scale=self.augment, size=data.shape)
+        self.data[:, :, :self.nb_pc] += np.random.normal(loc=0, scale=self.augment, size=self.data[:, :, :self.nb_pc].shape)
+        self.data[:, :, self.nb_pc] += np.random.normal(loc=0, scale=0.05, size=self.data[:, :, self.nb_pc].shape)
+
+
 
     def OLPS_data(self):
 
