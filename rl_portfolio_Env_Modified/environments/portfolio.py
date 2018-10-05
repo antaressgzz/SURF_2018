@@ -63,19 +63,25 @@ class DataSrc(object):
             (len(df), len(self.asset_names), len(self.features)))
         self.price_columns = self.features[:3]
         print(self.price_columns)
-        self.nb_pc = 3
+        self.vol_pos = 3
         self.close_pos = self.price_columns.index('close')
         print('close_pos:', self.close_pos)
         self._data = np.transpose(data, (1, 0, 2))
 
         if scale_extra_cols:
-            self._data[:, :, self.nb_pc:] /= 2000
+            self._data[:, :, self.vol_pos] /= 2000
 
         if self.talib == False:
             print('data:', self._data.shape)
             self._times = df.index
         else:
             talibs_data = talib_features(self._data[:, :, self.close_pos].copy())
+            mean = talibs_data.mean(1)
+            std = talibs_data.std(1)
+            # print(mean)
+            # print(std)
+            talibs_data -= mean[:, np.newaxis, :]
+            talibs_data /= std[:, np.newaxis, :]
             self._data = np.concatenate([self._data[:, 50:, :], talibs_data], axis=2)
             print('data:', self._data.shape)
             self._times = df.index[50:]
@@ -114,20 +120,20 @@ class DataSrc(object):
         if self.input == 'price':
             if self.norm == 'latest_close':
                 last_close_price = data_window[:, -1, self.close_pos]
-                data_window[:, :, :self.nb_pc] /= last_close_price[:, np.newaxis, np.newaxis]
+                data_window[:, :, :self.vol_pos] /= last_close_price[:, np.newaxis, np.newaxis]
             elif self.norm == 'previous':
                 _data_window = self.data[:,
-                               self.step*self.trade_period:self.step*self.trade_period+self.window_length, :self.nb_pc].copy()
-                data_window[:, :, :self.nb_pc] /= _data_window
+                               self.step*self.trade_period:self.step*self.trade_period+self.window_length, :self.vol_pos].copy()
+                data_window[:, :, :self.vol_pos] /= _data_window
             elif self.norm == None:
                 pass
             else:
                 print('Invalid norm.')
         elif self.input == 'rf':
             _data_window = self.data[:,
-                           self.step*self.trade_period:self.step*self.trade_period+self.window_length, :self.nb_pc].copy()
-            data_window[:, :, :self.nb_pc] = data_window[:, :, :self.nb_pc] / _data_window - 1
-            data_window[:, :, :self.nb_pc] *= 500
+                           self.step*self.trade_period:self.step*self.trade_period+self.window_length, :self.vol_pos].copy()
+            data_window[:, :, :self.vol_pos] = data_window[:, :, :self.vol_pos] / _data_window - 1
+            data_window[:, :, :self.vol_pos] *= 500
             # data_window = np.clip(data_window, -1, 1)
         # print(data_window)
         # else:
@@ -174,9 +180,8 @@ class DataSrc(object):
         self.times = self._times[self.idx -
                                  self.window_length-1:self.idx+self.steps*self.trade_period+1]
         # augment data to prevent overfitting
-        self.data[:, :, :self.nb_pc] += np.random.normal(loc=0, scale=self.augment, size=self.data[:, :, :self.nb_pc].shape)
-        self.data[:, :, self.nb_pc] += np.random.normal(loc=0, scale=0.05, size=self.data[:, :, self.nb_pc].shape)
-
+        self.data[:, :, :self.vol_pos] += np.random.normal(loc=0, scale=self.augment, size=self.data[:, :, :self.vol_pos].shape)
+        self.data[:, :, self.vol_pos] += np.random.normal(loc=0, scale=0.05, size=self.data[:, :, self.vol_pos].shape)
 
 
     def OLPS_data(self):

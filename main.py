@@ -77,15 +77,15 @@ env_test = PortfolioEnv(df_test,
                    trading_cost=0.0,
                    trade_period=trade_period,
                    window_length=window_length,
-                   talib=False,
+                   talib=True,
                    augment=0.00005,
                    input='price',
                    norm=None,
                    random_reset=False)
 
 ob = env_test.reset()
-for ii in range(5):
-    print(ob['history'][:, :5, :])
+for ii in range(2):
+    print(ob['history'][:, :2, :])
     ob, r, d, i = env_test.step(np.ones(5)/5)
 
 # coo.back_test(env_test, 'usual')

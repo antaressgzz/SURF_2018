@@ -1,6 +1,6 @@
 import numpy as np
 from .config import eps
-# import talib
+import talib
 
 def sharpe(pc_array):
     """calculate sharpe ratio with the portfolio changes
@@ -43,7 +43,7 @@ def sigmoid(x):
 
 def talib_features(close_array):  # input : [asset,length]
     close_array = np.transpose(close_array)  # [length, asset]
-    newF = np.ones([np.shape(close_array)[1], np.shape(close_array)[0] - 50, 5])
+    newF = np.ones([np.shape(close_array)[1], np.shape(close_array)[0] - 50, 2])
     for i in range(np.shape(close_array)[1]):
         close = np.transpose(close_array)[:][i]
         macd, macdsignal, macdhist = talib.MACD(close, fastperiod=12, slowperiod=26, signalperiod=9)
@@ -54,7 +54,8 @@ def talib_features(close_array):  # input : [asset,length]
         upperband = upperband.tolist()
         middleband = middleband.tolist()
         lowerband = lowerband.tolist()
-        newfeactures = [macd, macdsignal, upperband, middleband, lowerband]
+        # newfeactures = [macd, macdsignal, upperband, middleband, lowerband]
+        newfeactures = [macd, macdsignal]
         newfeactures = list(map(list, zip(*newfeactures)))
         newfeactures = newfeactures[50:][:]
         newF[i][:] = newfeactures
