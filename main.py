@@ -4,23 +4,22 @@ import pandas as pd
 from rl_portfolio_Env_Modified.environments import PortfolioEnv
 import tensorflow as tf
 import numpy as np
-# %matplotlib inline
 
-df_train = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1018_30m.hf', key='train')
-df_test = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1018_30m.hf', key='test')
+df_train = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1017_30m.hf', key='train')
+df_test = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1017_30m.hf', key='test')
 
 division = 4
 gamma = 0
-name = '0305'
+name = '0503'
 print('model:',name)
-total_training_step = 180000
+total_training_step = 300000
 replay_period = 4
-save_period = 30000
+save_period = 50000
 batch_size = 32
 GPU = False
 asset_num = 5
 feature_num = 4
-window_length = 10
+window_length = 50
 trade_period = 1
 
 network_config = {
@@ -69,7 +68,7 @@ env = PortfolioEnv(df_train,
                    random_reset=True)
 
 
-# coo.train(env, total_training_step, replay_period, True)
+coo.train(env, total_training_step, replay_period, True)
 # coo.restore('0305-150000')
 
 env_test = PortfolioEnv(df_test,
@@ -77,15 +76,10 @@ env_test = PortfolioEnv(df_test,
                    trading_cost=0.0,
                    trade_period=trade_period,
                    window_length=window_length,
-                   talib=True,
-                   augment=0.00005,
-                   input='price',
+                   talib=False,
+                   augment=0.0,
+                   input='rf',
                    norm=None,
                    random_reset=False)
 
-ob = env_test.reset()
-for ii in range(2):
-    print(ob['history'][:, :2, :])
-    ob, r, d, i = env_test.step(np.ones(5)/5)
-
-# coo.back_test(env_test, 'usual')
+coo.back_test(env_test, 'usual')

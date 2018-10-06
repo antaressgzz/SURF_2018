@@ -181,7 +181,7 @@ class DataSrc(object):
                                  self.window_length-1:self.idx+self.steps*self.trade_period+1]
         # augment data to prevent overfitting
         self.data[:, :, :self.vol_pos] += np.random.normal(loc=0, scale=self.augment, size=self.data[:, :, :self.vol_pos].shape)
-        self.data[:, :, self.vol_pos] += np.random.normal(loc=0, scale=0.05, size=self.data[:, :, self.vol_pos].shape)
+        self.data[:, :, self.vol_pos] += np.random.normal(loc=0, scale=self.augment*1000, size=self.data[:, :, self.vol_pos].shape)
 
 
     def OLPS_data(self):
