@@ -6,6 +6,7 @@ import tensorflow as tf
 import tensorflow.contrib.layers as layers
 import os
 from core.config import network_config
+from ..util import w2c
 
 class Dqn_agent:
     def __init__(self, asset_num, division, feature_num, gamma,
@@ -65,8 +66,8 @@ class Dqn_agent:
         self.price_his_ = tf.placeholder(dtype=tf.float32,
                                          shape=[None, self.asset_num - 1, self.history_length, self.feature_num],
                                          name="ob_")
-        self.addi_inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.asset_num], name='addi_inputs')
-        self.addi_inputs_ = tf.placeholder(dtype=tf.float32, shape=[None, self.asset_num], name='addi_inputs_')
+        self.addi_inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.action_num], name='addi_inputs')
+        self.addi_inputs_ = tf.placeholder(dtype=tf.float32, shape=[None, self.action_num], name='addi_inputs_')
         self.r = tf.placeholder(dtype=tf.float32, shape=[None, ], name='r')
         self.a = tf.placeholder(dtype=tf.int32, shape=[None, ], name='a')
 
@@ -101,59 +102,58 @@ class Dqn_agent:
 
 
     def build_graph(self, price_his, addi_input):
+        train_cnn = not self.network_config['freeze_cnn']
         kernels = self.network_config['kernels']
         strides = self.network_config['strides']
         filters = self.network_config['filters']
-        cnn_bias = self.network_config['cnn_bias']
-        fc_size = self.network_config['fc_size']
+        fc1_size = self.network_config['fc1_size']
+        fc2_size = self.network_config['fc2_size']
         activation = self.network_config['activation']
         w_initializer = self.network_config['w_initializer']
         b_initializer = self.network_config['b_initializer']
         regularizer = self.network_config['regularizer']
-        weights_pos = self.network_config['weights_pos']
 
-        conv1 = tf.layers.conv2d(price_his, filters=filters[0], kernel_size=kernels[0], strides=strides[0], trainable=True,
-                                 use_bias=cnn_bias, activation=activation,
+        conv1 = tf.layers.conv2d(price_his, filters=filters[0], kernel_size=kernels[0], strides=strides[0],
+                                 trainable=train_cnn, activation=activation,
                                  kernel_regularizer=regularizer, bias_regularizer=regularizer,
                                  kernel_initializer=w_initializer, bias_initializer=b_initializer,
                                  padding="VALID", name='conv1')
         print('conv1:', conv1.shape)
 
-        conv2 = tf.layers.conv2d(conv1, filters=filters[1], kernel_size=kernels[1], strides=strides[1], trainable=True,
-                                 use_bias=cnn_bias, activation=activation,
+        conv2 = tf.layers.conv2d(conv1, filters=filters[1], kernel_size=kernels[1], strides=strides[1],
+                                 trainable=train_cnn, activation=activation,
                                  kernel_regularizer=regularizer, bias_regularizer=regularizer,
                                  kernel_initializer=w_initializer, bias_initializer=b_initializer,
                                  padding="VALID", name='conv2')
         print('conv2:', conv2.shape)
 
-        conv3 = tf.layers.conv2d(conv2, filters=filters[2], kernel_size=kernels[2], strides=strides[2], trainable=True,
-                                 use_bias=cnn_bias, activation=activation,
+        conv3 = tf.layers.conv2d(conv2, filters=filters[2], kernel_size=kernels[2], strides=strides[2],
+                                 trainable=train_cnn, activation=activation,
                                  kernel_regularizer=regularizer, bias_regularizer=regularizer,
                                  kernel_initializer=w_initializer, bias_initializer=b_initializer,
                                  padding="VALID", name='conv3')
         print('conv3:', conv3.shape)
 
-        fc_w = layers.fully_connected(addi_input, num_outputs=256, activation_fn=activation,
+        conv_flatten = tf.layers.flatten(conv3)
+
+        print('conv_flatten:', conv_flatten.shape)
+
+        fc1 = layers.fully_connected(conv_flatten, num_outputs=fc1_size, activation_fn=activation,
                                            weights_regularizer=regularizer,
                                            weights_initializer=w_initializer,
                                            biases_initializer=b_initializer,
                                            biases_regularizer=regularizer,
-                                           trainable=True, scope='fc_w')
-        print('fc_w:', fc_w.shape)
+                                           trainable=train_cnn, scope='fc1')
 
-        conv_flatten = tf.layers.flatten(conv3)
-        print('conv_flatten:', conv_flatten.shape)
+        concat = tf.concat([fc1, addi_input], 1)
 
-        fc_input = tf.concat([conv_flatten, fc_w], 1)
-        print('fc_input:', fc_input.shape)
-
-        fc1 = layers.fully_connected(fc_input, num_outputs=fc_size, activation_fn=activation,
-                                     weights_regularizer=regularizer,
-                                     weights_initializer=w_initializer,
-                                     biases_regularizer=regularizer,
-                                     biases_initializer=b_initializer,
-                                     trainable=True, scope='fc1')
-        print('fc1:', fc1.shape)
+        fc2 = layers.fully_connected(concat, num_outputs=fc2_size, activation_fn=activation,
+                                           weights_regularizer=regularizer,
+                                           weights_initializer=w_initializer,
+                                           biases_initializer=b_initializer,
+                                           biases_regularizer=regularizer,
+                                           trainable=True, scope='fc2')
+        print('fc2:', fc2.shape)
 
         output = layers.fully_connected(fc1, num_outputs=self.action_num, activation_fn=None,
                                         weights_regularizer=regularizer,
@@ -161,7 +161,7 @@ class Dqn_agent:
                                         weights_initializer=w_initializer,
                                         trainable=True, scope='output')
 
-        return fc_input, output
+        return fc1, output
 
     def initialize_tb(self):
         for v in tf.trainable_variables():
@@ -177,15 +177,18 @@ class Dqn_agent:
     def replay(self):
         obs, action_batch, reward_batch, obs_ = self.memory.sample()
 
-        q_values_next = self.sess.run(self.q_pred, feed_dict={self.price_his: obs_['history'], self.addi_inputs:obs_['weights']})
+
+        q_values_next = self.sess.run(self.q_pred, feed_dict={self.price_his: obs_['history'],
+                                                              self.addi_inputs: w2c(obs_['weights'], self.actions)})
         best_actions = np.argmax(q_values_next, axis=1)
-        q_values_next_target = self.sess.run(self.tar_pred, feed_dict={self.price_his_: obs_['history'], self.addi_inputs_:obs_['weights']})
+        q_values_next_target = self.sess.run(self.tar_pred, feed_dict={self.price_his_: obs_['history'],
+                                                                       self.addi_inputs_:w2c(obs_['weights'], self.actions)})
         targets_batch = reward_batch + self.gamma * q_values_next_target[np.arange(len(action_batch)), best_actions]
 
         # Train
         fd = {self.q_target: targets_batch,
               self.price_his: obs['history'],
-              self.addi_inputs: obs['weights'],
+              self.addi_inputs: w2c(obs['weights'], self.actions),
               self.a : action_batch}
         _, global_step = self.sess.run([self.train_op, self.global_step], feed_dict=fd)
 
@@ -207,7 +210,7 @@ class Dqn_agent:
         def action_max():
             action_values = self.sess.run(self.q_pred,
                         feed_dict={self.price_his: observation['history'][np.newaxis, :, :, :],
-                                   self.addi_inputs: observation['weights'][np.newaxis, :]})  # fctur
+                                   self.addi_inputs: w2c(observation['weights'][np.newaxis, :], self.actions)})  # fctur
             return np.argmax(action_values)
 
         if not test:

@@ -1,5 +1,5 @@
 from coordinator import Coordinator
-from core.dqn_algo.dqn_agent import Dqn_agent
+from core.dqn_algo.dqn_agent_fee import Dqn_agent
 import pandas as pd
 from rl_portfolio_Env_Modified.environments import PortfolioEnv
 import tensorflow as tf
@@ -24,16 +24,16 @@ trade_period = 1
 
 network_config = {
         'type':'cnn_fc',
+        'freeze_cnn': False,
         'kernels':[[1, 3], [1, 3], [1, 3]],
         'strides':[[1, 1], [1, 1], [1, 1]],
         'filters':[3, 4, 5],
-        'cnn_bias': True,
+        'fc1_size':256,
+        'fc2_size':256,
         'regularizer': None,
         'activation': tf.nn.selu,
-        'fc_size': 256,
         'b_initializer':tf.constant_initializer(0.1),
         'w_initializer':tf.truncated_normal_initializer(stddev=0.1),
-        'weights_pos': None
     }
 
 
