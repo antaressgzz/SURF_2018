@@ -1,6 +1,6 @@
 import numpy as np
 from .config import eps
-# import talib
+import talib
 
 def sharpe(pc_array):
     """calculate sharpe ratio with the portfolio changes
