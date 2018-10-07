@@ -151,8 +151,6 @@ class Dqn_agent:
                                         trainable=True, scope='output')
 
 
-
-
         return fc_input, output
 
     def initialize_tb(self):

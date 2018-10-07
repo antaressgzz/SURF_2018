@@ -14,6 +14,7 @@ class Dqn_agent:
                  epsilon=1, epsilon_Min=0.1, epsilon_decay_period=100000,
                  update_tar_period=1000,
                  history_length=50,
+                 process_cost=False,
                  memory_size=10000,
                  batch_size=32,
                  save_period=100000,
@@ -30,6 +31,7 @@ class Dqn_agent:
         self.name = name
         self.update_tar_period = update_tar_period
         self.history_length = history_length
+        self.process_cost = process_cost
         self.feature_num = feature_num
         self.global_step = tf.Variable(0, trainable=False)
         # self.lr = tf.train.exponential_decay(learning_rate=0.01, global_step=self.global_step,
@@ -66,8 +68,13 @@ class Dqn_agent:
         self.price_his_ = tf.placeholder(dtype=tf.float32,
                                          shape=[None, self.asset_num - 1, self.history_length, self.feature_num],
                                          name="ob_")
-        self.addi_inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.action_num], name='addi_inputs')
-        self.addi_inputs_ = tf.placeholder(dtype=tf.float32, shape=[None, self.action_num], name='addi_inputs_')
+        if self.process_cost:
+            self.addi_inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.action_num], name='addi_inputs')
+            self.addi_inputs_ = tf.placeholder(dtype=tf.float32, shape=[None, self.action_num], name='addi_inputs_')
+        else:
+            self.addi_inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.asset_num], name='addi_inputs')
+            self.addi_inputs_ = tf.placeholder(dtype=tf.float32, shape=[None, self.asset_num], name='addi_inputs_')
+
         self.r = tf.placeholder(dtype=tf.float32, shape=[None, ], name='r')
         self.a = tf.placeholder(dtype=tf.int32, shape=[None, ], name='a')
 
@@ -146,6 +153,7 @@ class Dqn_agent:
                                            trainable=train_cnn, scope='fc1')
 
         concat = tf.concat([fc1, addi_input], 1)
+        print('concat', concat.shape)
 
         fc2 = layers.fully_connected(concat, num_outputs=fc2_size, activation_fn=activation,
                                            weights_regularizer=regularizer,
@@ -177,18 +185,24 @@ class Dqn_agent:
     def replay(self):
         obs, action_batch, reward_batch, obs_ = self.memory.sample()
 
+        if self.process_cost:
+            cost = w2c(obs['weights'], self.actions)
+            cost_ = w2c(obs_['weights'], self.actions)
+        else:
+            cost = obs['weights']
+            cost_ = obs['weights']
 
         q_values_next = self.sess.run(self.q_pred, feed_dict={self.price_his: obs_['history'],
-                                                              self.addi_inputs: w2c(obs_['weights'], self.actions)})
+                                                              self.addi_inputs: cost_})
         best_actions = np.argmax(q_values_next, axis=1)
         q_values_next_target = self.sess.run(self.tar_pred, feed_dict={self.price_his_: obs_['history'],
-                                                                       self.addi_inputs_:w2c(obs_['weights'], self.actions)})
+                                                                       self.addi_inputs_: cost_})
         targets_batch = reward_batch + self.gamma * q_values_next_target[np.arange(len(action_batch)), best_actions]
 
         # Train
         fd = {self.q_target: targets_batch,
               self.price_his: obs['history'],
-              self.addi_inputs: w2c(obs['weights'], self.actions),
+              self.addi_inputs: cost,
               self.a : action_batch}
         _, global_step = self.sess.run([self.train_op, self.global_step], feed_dict=fd)
 
@@ -207,10 +221,15 @@ class Dqn_agent:
 
     def choose_action(self, observation, test=False):
 
+        if self.process_cost:
+            cost = w2c(observation['weights'], self.actions)
+        else:
+            cost = observation['weights'][np.newaxis, :]
+
         def action_max():
             action_values = self.sess.run(self.q_pred,
                         feed_dict={self.price_his: observation['history'][np.newaxis, :, :, :],
-                                   self.addi_inputs: w2c(observation['weights'][np.newaxis, :], self.actions)})  # fctur
+                                   self.addi_inputs: cost})
             return np.argmax(action_values)
 
         if not test:

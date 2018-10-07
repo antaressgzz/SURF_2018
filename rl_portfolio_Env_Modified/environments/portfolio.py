@@ -56,6 +56,7 @@ class DataSrc(object):
 
         # dataframe to matrix
         self.asset_names = df.columns.levels[0].tolist()
+
         # print(self.asset_names)
         self.features = df.columns.levels[1].tolist()
         print('features:', self.features)
@@ -63,13 +64,18 @@ class DataSrc(object):
             (len(df), len(self.asset_names), len(self.features)))
         self.price_columns = self.features[:3]
         print(self.price_columns)
-        self.vol_pos = 3
+        self.nb_pc = len(self.price_columns)
         self.close_pos = self.price_columns.index('close')
         print('close_pos:', self.close_pos)
         self._data = np.transpose(data, (1, 0, 2))
 
-        if scale_extra_cols:
-            self._data[:, :, self.vol_pos] /= 2000
+        self.mean = self._data.mean(1)
+        self.std = self._data.std(1)
+
+        if len(self.features) == 4:
+            self.vol_pos = 3
+            self._data[:, :, self.vol_pos] -= self.mean[:, np.newaxis, self.vol_pos]
+            self._data[:, :, self.vol_pos] /= self.mean[:, np.newaxis, self.vol_pos]
 
         if self.talib == False:
             print('data:', self._data.shape)
@@ -78,76 +84,42 @@ class DataSrc(object):
             talibs_data = talib_features(self._data[:, :, self.close_pos].copy())
             mean = talibs_data.mean(1)
             std = talibs_data.std(1)
-            # print(mean)
-            # print(std)
             talibs_data -= mean[:, np.newaxis, :]
             talibs_data /= std[:, np.newaxis, :]
             self._data = np.concatenate([self._data[:, 50:, :], talibs_data], axis=2)
             print('data:', self._data.shape)
             self._times = df.index[50:]
 
-        # self.non_price_columns = set(
-        #     df.columns.levels[1]) - set(self.price_columns)
-
-
-
-        # Stats to let us normalize non price columns
-        # if scale_extra_cols:
-        #     x = self._data.reshape((-1, len(self.features)))
-        #     self.stats = dict(mean=x.mean(0), std=x.std(0))
-            # for column in self._data.columns.levels[1].tolist():
-            #     x = df.xs(key=column, axis=1, level='Price').as_matrix()[:, :]
-            #     self.stats["mean"].append(x.mean())
-            #      = dict(mean=x.mean(), std=x.std())
-
-        # self.reset()
-
     def _step(self):
         # get history matrix from dataframe
         data_window = self.data[:, self.step*self.trade_period+1:self.step*self.trade_period+1+
                                              self.window_length].copy()
-        # print(self.step*self.trade_period+1+self.window_length)
-        # print('ddddd', data_window[:, -10:, 2])
+
 
         # (eq.1) prices
         y1 = data_window[:, -1, self.close_pos] / data_window[:, -self.trade_period-1, self.close_pos]
-        # y1 = self.data[:, self.step+1+self.window_length, 0].copy() / self.data[:, self.step+self.window_length, 0].copy()
         y1 = np.concatenate([[1.0], y1])  # add cash price
 
         # (eq 18) X: prices are divided by close price
 
-
         if self.input == 'price':
             if self.norm == 'latest_close':
                 last_close_price = data_window[:, -1, self.close_pos]
-                data_window[:, :, :self.vol_pos] /= last_close_price[:, np.newaxis, np.newaxis]
+                data_window[:, :, :self.nb_pc] /= last_close_price[:, np.newaxis, np.newaxis]
             elif self.norm == 'previous':
                 _data_window = self.data[:,
-                               self.step*self.trade_period:self.step*self.trade_period+self.window_length, :self.vol_pos].copy()
-                data_window[:, :, :self.vol_pos] /= _data_window
+                               self.step * self.trade_period:self.step * self.trade_period + self.window_length,
+                               :self.nb_pc].copy()
+                data_window[:, :, :self.nb_pc] /= _data_window
             elif self.norm == None:
                 pass
             else:
                 print('Invalid norm.')
         elif self.input == 'rf':
             _data_window = self.data[:,
-                           self.step*self.trade_period:self.step*self.trade_period+self.window_length, :self.vol_pos].copy()
-            data_window[:, :, :self.vol_pos] = data_window[:, :, :self.vol_pos] / _data_window - 1
-            data_window[:, :, :self.vol_pos] *= 500
-            # data_window = np.clip(data_window, -1, 1)
-        # print(data_window)
-        # else:
-        #     print('Invalid Input.')
-
-        # if self.scale_extra_cols:
-        #     # normalize non price columns
-        #     data_window[:, :, nb_pc:] -= self.stats["mean"][None, None, nb_pc:]
-        #     data_window[:, :, nb_pc:] /= self.stats["std"][None, None, nb_pc:]
-        #     data_window[:, :, nb_pc:] = np.clip(
-        #         data_window[:, :, nb_pc:],
-        #         self.stats["mean"][nb_pc:] - self.stats["std"][nb_pc:] * 10,
-        #         self.stats["mean"][nb_pc:] + self.stats["std"][nb_pc:] * 10
-        #     )
+                           self.step*self.trade_period:self.step*self.trade_period+self.window_length, :self.nb_pc].copy()
+            data_window[:, :, :self.nb_pc] = data_window[:, :, :self.nb_pc] / _data_window - 1
+            data_window[:, :, :self.nb_pc] *= 1000
 
         self.step += 1
         history = data_window
@@ -175,14 +147,17 @@ class DataSrc(object):
         self.data = self._data[:, self.idx -
                              self.window_length-1:self.idx+self.steps*self.trade_period+1].copy()
 
-        # print(data.shape)
-        # print(self.idx)
         self.times = self._times[self.idx -
                                  self.window_length-1:self.idx+self.steps*self.trade_period+1]
         # augment data to prevent overfitting
-        self.data[:, :, :self.vol_pos] += np.random.normal(loc=0, scale=self.augment, size=self.data[:, :, :self.vol_pos].shape)
-        self.data[:, :, self.vol_pos] += np.random.normal(loc=0, scale=self.augment*1000, size=self.data[:, :, self.vol_pos].shape)
+        for i in range(len(self.asset_names)):
+            for j in range(len(self.price_columns)):
+                self.data[i, :, j] += \
+                np.random.normal(loc=0, scale=self.augment*self.mean[i, j], size=self.data[i, :, j].shape)
 
+        if len(self.features) == 4:
+            self.data[:, :, self.vol_pos] += \
+                np.random.normal(loc=0, scale=1000*self.augment, size=self.data[:, :, self.vol_pos].shape)
 
     def OLPS_data(self):
 

@@ -109,30 +109,28 @@ class Dqn_agent:
         kernels = self.network_config['kernels']
         strides = self.network_config['strides']
         filters = self.network_config['filters']
-        cnn_bias = self.network_config['cnn_bias']
         fc_size = self.network_config['fc_size']
         activation = self.network_config['activation']
         w_initializer = self.network_config['w_initializer']
         b_initializer = self.network_config['b_initializer']
         regularizer = self.network_config['regularizer']
-        weights_pos = self.network_config['weights_pos']
 
-        conv1 = tf.layers.conv2d(price_his, filters=filters[0], kernel_size=kernels[0], strides=strides[0], trainable=True,
-                                 use_bias=cnn_bias, activation=activation,
+        conv1 = tf.layers.conv2d(price_his, filters=filters[0], kernel_size=kernels[0], strides=strides[0],
+                                 trainable=True,activation=activation,
                                  kernel_regularizer=regularizer, bias_regularizer=regularizer,
                                  kernel_initializer=w_initializer, bias_initializer=b_initializer,
                                  padding="VALID", name='conv1')
         print('conv1:', conv1.shape)
 
-        conv2 = tf.layers.conv2d(conv1, filters=filters[1], kernel_size=kernels[1], strides=strides[1], trainable=True,
-                                 use_bias=cnn_bias, activation=activation,
+        conv2 = tf.layers.conv2d(conv1, filters=filters[1], kernel_size=kernels[1], strides=strides[1],
+                                 activation=activation, trainable=True,
                                  kernel_regularizer=regularizer, bias_regularizer=regularizer,
                                  kernel_initializer=w_initializer, bias_initializer=b_initializer,
                                  padding="VALID", name='conv2')
         print('conv2:', conv2.shape)
 
-        conv3 = tf.layers.conv2d(conv2, filters=filters[2], kernel_size=kernels[2], strides=strides[2], trainable=True,
-                                 use_bias=cnn_bias, activation=activation,
+        conv3 = tf.layers.conv2d(conv2, filters=filters[2], kernel_size=kernels[2], strides=strides[2],
+                                 activation=activation, trainable=True,
                                  kernel_regularizer=regularizer, bias_regularizer=regularizer,
                                  kernel_initializer=w_initializer, bias_initializer=b_initializer,
                                  padding="VALID", name='conv3')
@@ -140,6 +138,7 @@ class Dqn_agent:
 
         fc_input = tf.layers.flatten(conv3)
         print('fc_input:', fc_input.shape)
+
         fc1 = layers.fully_connected(fc_input, num_outputs=fc_size, activation_fn=activation,
                                      weights_regularizer=regularizer,
                                      weights_initializer=w_initializer,
