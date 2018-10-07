@@ -27,10 +27,10 @@ network_config = {
         'type':'cnn_fc',
         'kernels':[[1, 3], [1, 3], [1, 3]],
         'strides':[[1, 1], [1, 1], [1, 1]],
-        'filters':[6, 8, 10],
+        'filters':[3, 4, 5],
         'regularizer': None,
         'activation': tf.nn.selu,
-        'fc_size': 512,
+        'fc_size': 256,
         'b_initializer':tf.constant_initializer(0.1),
         'w_initializer':tf.truncated_normal_initializer(stddev=0.1),
     }

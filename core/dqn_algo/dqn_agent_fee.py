@@ -222,7 +222,7 @@ class Dqn_agent:
     def choose_action(self, observation, test=False):
 
         if self.process_cost:
-            cost = w2c(observation['weights'], self.actions)
+            cost = w2c(observation['weights'][np.newaxis, :], self.actions)
         else:
             cost = observation['weights'][np.newaxis, :]
 
