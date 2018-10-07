@@ -95,31 +95,30 @@ class DataSrc(object):
         data_window = self.data[:, self.step*self.trade_period+1:self.step*self.trade_period+1+
                                              self.window_length].copy()
 
-
         # (eq.1) prices
         y1 = data_window[:, -1, self.close_pos] / data_window[:, -self.trade_period-1, self.close_pos]
         y1 = np.concatenate([[1.0], y1])  # add cash price
 
-        # (eq 18) X: prices are divided by close price
+        if self.norm == 'latest_close':
+            last_close_price = data_window[:, -1, self.close_pos]
+            data_window[:, :, :self.nb_pc] /= last_close_price[:, np.newaxis, np.newaxis]
+            if self.input == 'rf':
+                data_window -= 1
+                data_window *= 1000
 
-        if self.input == 'price':
-            if self.norm == 'latest_close':
-                last_close_price = data_window[:, -1, self.close_pos]
-                data_window[:, :, :self.nb_pc] /= last_close_price[:, np.newaxis, np.newaxis]
-            elif self.norm == 'previous':
-                _data_window = self.data[:,
-                               self.step * self.trade_period:self.step * self.trade_period + self.window_length,
-                               :self.nb_pc].copy()
-                data_window[:, :, :self.nb_pc] /= _data_window
-            elif self.norm == None:
-                pass
-            else:
-                print('Invalid norm.')
-        elif self.input == 'rf':
+        elif self.norm == 'previous':
             _data_window = self.data[:,
-                           self.step*self.trade_period:self.step*self.trade_period+self.window_length, :self.nb_pc].copy()
-            data_window[:, :, :self.nb_pc] = data_window[:, :, :self.nb_pc] / _data_window - 1
-            data_window[:, :, :self.nb_pc] *= 1000
+                           self.step * self.trade_period:self.step * self.trade_period + self.window_length,
+                           :self.nb_pc].copy()
+            data_window[:, :, :self.nb_pc] /= _data_window
+            if self.input == 'rf':
+                data_window -= 1
+                data_window *= 1000
+
+        elif self.norm == None:
+            pass
+        else:
+            print('Invalid norm.')
 
         self.step += 1
         history = data_window

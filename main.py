@@ -62,12 +62,13 @@ env = PortfolioEnv(df_train,
                    talib=False,
                    augment=0.00001,
                    input='rf',
-                   norm=None,
+                   norm='latest_close',
                    random_reset=True)
 
 
 coo.train(env, total_training_step, replay_period, True)
 # coo.restore('0201-300000')
+
 
 env_test = PortfolioEnv(df_test,
                    steps=8000,
