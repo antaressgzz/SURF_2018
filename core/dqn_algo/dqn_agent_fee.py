@@ -163,7 +163,7 @@ class Dqn_agent:
                                            trainable=True, scope='fc2')
         print('fc2:', fc2.shape)
 
-        output = layers.fully_connected(fc1, num_outputs=self.action_num, activation_fn=None,
+        output = layers.fully_connected(fc2, num_outputs=self.action_num, activation_fn=None,
                                         weights_regularizer=regularizer,
                                         biases_regularizer=regularizer,
                                         weights_initializer=w_initializer,
@@ -272,5 +272,6 @@ class Dqn_agent:
 
     def action_values(self, o):
         action_values = self.sess.run(self.q_pred,
-                     feed_dict={self.price_his: o['history'][np.newaxis, :, :, :]})
+                     feed_dict={self.price_his: o['history'][np.newaxis, :, :, :],
+                                self.addi_inputs: o['weights'][np.newaxis, :]})
         return action_values

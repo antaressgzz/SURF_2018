@@ -11,9 +11,9 @@ class Coordinator:
     def __init__(self, agent):
         self.agent = agent
 
-    def train(self, env, total_training_step, replay_period, tensorboard=False):
+    def train(self, env_train, env_val, total_training_step, replay_period, tensorboard=False):
 
-        self.env = env
+        self.env_train = env_train
         if tensorboard == True:
             self.agent.initialize_tb()
         else:
@@ -25,11 +25,22 @@ class Coordinator:
         self.rewards = []
         self.ave_rewards = []
 
+        def get_val_reward():
+            ob = env_val.reset()
+            val_rewards = []
+            while True:
+                action_idx, action = self.agent.choose_action(ob, test=True)
+                ob, reward, done, _ = env_val.step(action)
+                val_rewards.append(reward)
+                if done:
+                    break
+            return np.mean(val_rewards)
+
         while training_step < self.total_training_step:
-            observation = self.env.reset()
+            observation = self.env_train.reset()
             while True:
                 action_idx, action = self.agent.choose_action(observation)
-                observation_, reward, done, info = self.env.step(action)
+                observation_, reward, done, info = self.env_train.step(action)
                 self.rewards.append(reward)
                 reward *= 1000
                 # reward = np.clip(reward, -1, 1)
@@ -47,10 +58,11 @@ class Coordinator:
                         training_step = self.agent.get_training_step()
                         if (training_step - 1) % 5000 == 0:
                             num_r = 50000
-                            ave_reward = np.sum(self.rewards[-num_r:]) / num_r
-                            self.ave_rewards.append(ave_reward)
-                            print('training_step: {}, epsilon: {:.2f}, ave_reward: {:.2e}'.format(
-                            training_step, self.agent.epsilon, ave_reward))
+                            train_r = np.sum(self.rewards[-num_r:]) / num_r
+                            self.ave_rewards.append(train_r)
+                            val_r = get_val_reward()
+                            print('training_step: {}, epsilon: {:.2f}, train_r: {:.2e}, val_r:{:.2e}'.format(
+                            training_step, self.agent.epsilon, train_r, val_r))
 
                 if done:
                     break

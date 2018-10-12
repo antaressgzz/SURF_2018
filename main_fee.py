@@ -6,20 +6,20 @@ import tensorflow as tf
 import numpy as np
 # %matplotlib inline
 
-df_train = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1018_30m.hf', key='train')
-df_test = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1018_30m.hf', key='test')
+df_train = pd.read_hdf('./data/data_raw/forex_3f_1.hf', key='train')
+df_test = pd.read_hdf('./data/data_raw/forex_3f_1.hf', key='test')
 
-division = 3
-gamma = 0.9
-name = '0503'
+division = 4
+gamma = 0.99
+name = 'test'
 print('model:',name)
 total_training_step = 150000
 replay_period = 4
-save_period = 50000
+save_period = 30000
 batch_size = 32
 GPU = False
 asset_num = 5
-feature_num = 4
+feature_num = 3
 window_length = 50
 trade_period = 1
 
@@ -29,8 +29,8 @@ network_config = {
         'kernels':[[1, 3], [1, 3], [1, 3]],
         'strides':[[1, 1], [1, 1], [1, 1]],
         'filters':[3, 4, 5],
-        'fc1_size':256,
-        'fc2_size':256,
+        'fc1_size':64,
+        'fc2_size':64,
         'regularizer': None,
         'activation': tf.nn.selu,
         'b_initializer':tf.constant_initializer(0.1),
@@ -60,28 +60,28 @@ coo = Coordinator(agent)
 
 env = PortfolioEnv(df_train,
                    steps=1000,
-                   trading_cost=0.0,
-                   trade_period=trade_period,
-                   window_length=window_length,
-                   talib=False,
-                   augment=0.00001,
-                   input='rf',
-                   norm=None,
-                   random_reset=True)
-
-
-coo.train(env, total_training_step, replay_period, True)
-# coo.restore('0305-150000')
-
-env_test = PortfolioEnv(df_test,
-                   steps=8000,
-                   trading_cost=0.0,
+                   trading_cost=0.001,
                    trade_period=trade_period,
                    window_length=window_length,
                    talib=False,
                    augment=0.0,
                    input='rf',
-                   norm=None,
+                   norm='latest_close',
+                   random_reset=True)
+
+env_test = PortfolioEnv(df_test,
+                   steps=1000,
+                   trading_cost=0.001,
+                   trade_period=trade_period,
+                   window_length=window_length,
+                   talib=False,
+                   augment=0.0,
+                   input='rf',
+                   norm='latest_close',
                    random_reset=False)
 
-coo.back_test(env_test, 'usual')
+
+coo.train(env, env_test, total_training_step, replay_period, True)
+# coo.restore('0903-30000')
+
+# coo.back_test(env_test, 'usual')
