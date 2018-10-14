@@ -30,7 +30,7 @@ class Coordinator:
         gamma = 0
         name = name
         save_period = 30000
-        batch_size = 32
+        batch_size = 16
         asset_num = 5
         feature_num = 4
         # window_length = 50
@@ -47,7 +47,7 @@ class Coordinator:
             'w_initializer': tf.truncated_normal_initializer(stddev=0.01, seed=0),
         }
 
-        self.total_training_step = 10000
+        self.total_training_step = 70000
         self.replay_period = 4
         self.agent = Dqn_agent(asset_num,
                               division,

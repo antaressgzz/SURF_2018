@@ -17,7 +17,7 @@ def loss_processing(rewards, mode='inverse'):
     pass
 
 # Number of model to train
-max_evals = 2
+max_evals = 20
 
 # model name list
 name_list = list(np.arange(max_evals))
@@ -29,7 +29,7 @@ def val_reward(tuning_params):
     coo = Coordinator(tuning_params, name)
     val_rewards, tr_rs = coo.evaluate()
     # loss = loss_processing(val_rewards, mode='inverse')
-    loss = -1 * np.mean(val_rewards[-4:]) * 1e6
+    loss = -1 * np.mean(val_rewards[-5:]) * 1e6
     result = {'loss': loss,
               'status': STATUS_OK,
               'tr_rs': tr_rs,
