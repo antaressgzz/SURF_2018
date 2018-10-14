@@ -10,8 +10,11 @@ from core.config import network_config
 class Dqn_agent:
     def __init__(self, asset_num, division, feature_num, gamma,
                  network_topology=network_config['cnn_fc'],
-                 epsilon=1, epsilon_Min=0.1, epsilon_decay_period=100000,
-                 update_tar_period=1000,
+                 learning_rate=0.00025,
+                 epsilon=1, epsilon_Min=0.1,
+                 dropout=0.5,
+                 epsilon_decay_period=100000,
+                 update_tar_period=3000,
                  history_length=50,
                  memory_size=10000,
                  batch_size=32,
@@ -23,6 +26,7 @@ class Dqn_agent:
         self.epsilon = epsilon
         self.epsilon_min = epsilon_Min
         self.epsilon_decay_period = epsilon_decay_period
+        self.dropout = dropout
         self.asset_num = asset_num
         self.division = division
         self.gamma = gamma
@@ -31,8 +35,8 @@ class Dqn_agent:
         self.history_length = history_length
         self.feature_num = feature_num
         self.global_step = tf.Variable(0, trainable=False)
-        # self.lr = tf.train.exponential_decay(learning_rate=0.01, global_step=self.global_step,
-        #                                      decay_steps=learning_rate_decay_step, decay_rate=0.9)
+        self.lr = learning_rate
+
         self.action_num, self.actions = action_discretization(self.asset_num, self.division)
         config = tf.ConfigProto()
 
@@ -69,6 +73,8 @@ class Dqn_agent:
         self.addi_inputs_ = tf.placeholder(dtype=tf.float32, shape=[None, self.asset_num], name='addi_inputs_')
         self.r = tf.placeholder(dtype=tf.float32, shape=[None, ], name='r')
         self.a = tf.placeholder(dtype=tf.int32, shape=[None, ], name='a')
+        self.keep_prob = tf.placeholder(tf.float32)
+
 
         # Training network
         with tf.variable_scope('estm_net'):
@@ -92,11 +98,11 @@ class Dqn_agent:
             self.loss = tf.reduce_mean(square)
 
         with tf.name_scope('train'):
-            self.optimizer = tf.train.RMSPropOptimizer(0.00025, 0.95, 0.0, 1e-6)
+            self.optimizer = tf.train.RMSPropOptimizer(self.lr, 0.95, 0.0, 1e-6)
             self.train_op = self.optimizer.minimize(self.loss, global_step=self.global_step)
 
-        t_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='target_net')
-        e_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='estm_net')
+        t_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='target_net'+self.name)
+        e_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='estm_net'+self.name)
         self.update_target = [tf.assign(t, l) for t, l in zip(t_params, e_params)]
 
 
@@ -104,52 +110,40 @@ class Dqn_agent:
         kernels = self.network_config['kernels']
         strides = self.network_config['strides']
         filters = self.network_config['filters']
-        cnn_bias = self.network_config['cnn_bias']
         fc_size = self.network_config['fc_size']
         activation = self.network_config['activation']
         w_initializer = self.network_config['w_initializer']
         b_initializer = self.network_config['b_initializer']
         regularizer = self.network_config['regularizer']
-        weights_pos = self.network_config['weights_pos']
 
-        conv1 = tf.layers.conv2d(price_his, filters=filters[0], kernel_size=kernels[0], strides=strides[0], trainable=True,
-                                 use_bias=cnn_bias, activation=activation,
-                                 kernel_regularizer=regularizer, bias_regularizer=regularizer,
-                                 kernel_initializer=w_initializer, bias_initializer=b_initializer,
-                                 padding="VALID", name='conv1')
-        print('conv1:', conv1.shape)
+        conv = price_his
 
-        conv2 = tf.layers.conv2d(conv1, filters=filters[1], kernel_size=kernels[1], strides=strides[1], trainable=True,
-                                 use_bias=cnn_bias, activation=activation,
-                                 kernel_regularizer=regularizer, bias_regularizer=regularizer,
-                                 kernel_initializer=w_initializer, bias_initializer=b_initializer,
-                                 padding="VALID", name='conv2')
-        print('conv2:', conv2.shape)
+        for i in range(len(kernels)):
+            conv = tf.layers.conv2d(conv, filters=filters[i], kernel_size=kernels[i], strides=strides[i],
+                                     trainable=True, activation=activation,
+                                     kernel_regularizer=regularizer, bias_regularizer=regularizer,
+                                     kernel_initializer=w_initializer, bias_initializer=b_initializer,
+                                     padding="VALID", name=self.name+'conv'+str(i))
+            # print('conv:', conv.shape)
 
-        conv3 = tf.layers.conv2d(conv2, filters=filters[2], kernel_size=kernels[2], strides=strides[2], trainable=True,
-                                 use_bias=cnn_bias, activation=activation,
-                                 kernel_regularizer=regularizer, bias_regularizer=regularizer,
-                                 kernel_initializer=w_initializer, bias_initializer=b_initializer,
-                                 padding="VALID", name='conv3')
-        print('conv3:', conv3.shape)
 
-        fc_input = tf.layers.flatten(conv3)
-        print('fc_input:', fc_input.shape)
+        fc_input = tf.layers.flatten(conv)
+        # print('fc_input:', fc_input.shape)
+
         fc1 = layers.fully_connected(fc_input, num_outputs=fc_size, activation_fn=activation,
                                      weights_regularizer=regularizer,
                                      weights_initializer=w_initializer,
                                      biases_regularizer=regularizer,
                                      biases_initializer=b_initializer,
-                                     trainable=True, scope='fc1')
+                                     trainable=True, scope=self.name+'fc1')
+        # print('fc1:', fc1.shape)
+        fc1 = tf.nn.dropout(fc1, self.keep_prob)
 
-
-        print('fc1:', fc1.shape)
         output = layers.fully_connected(fc1, num_outputs=self.action_num, activation_fn=None,
                                         weights_regularizer=regularizer,
                                         biases_regularizer=regularizer,
                                         weights_initializer=w_initializer,
-                                        trainable=True, scope='output')
-
+                                        trainable=True, scope=self.name+'output')
 
         return fc_input, output
 
@@ -167,16 +161,19 @@ class Dqn_agent:
     def replay(self):
         obs, action_batch, reward_batch, obs_ = self.memory.sample()
 
-        q_values_next = self.sess.run(self.q_pred, feed_dict={self.price_his: obs_['history'], self.addi_inputs:obs_['weights']})
+        q_values_next = self.sess.run(self.q_pred, feed_dict={self.price_his: obs_['history'], self.addi_inputs:obs_['weights'],
+                                                              self.keep_prob: self.dropout})
         best_actions = np.argmax(q_values_next, axis=1)
-        q_values_next_target = self.sess.run(self.tar_pred, feed_dict={self.price_his_: obs_['history'], self.addi_inputs_:obs_['weights']})
+        q_values_next_target = self.sess.run(self.tar_pred, feed_dict={self.price_his_: obs_['history'], self.addi_inputs_:obs_['weights'],
+                                                                       self.keep_prob: self.dropout})
         targets_batch = reward_batch + self.gamma * q_values_next_target[np.arange(len(action_batch)), best_actions]
 
         # Train
         fd = {self.q_target: targets_batch,
               self.price_his: obs['history'],
               self.addi_inputs: obs['weights'],
-              self.a : action_batch}
+              self.a : action_batch,
+              self.keep_prob: self.dropout}
         _, global_step = self.sess.run([self.train_op, self.global_step], feed_dict=fd)
 
         if global_step % self.update_tar_period == 0:
@@ -197,7 +194,8 @@ class Dqn_agent:
         def action_max():
             action_values = self.sess.run(self.q_pred,
                         feed_dict={self.price_his: observation['history'][np.newaxis, :, :, :],
-                                   self.addi_inputs: observation['weights'][np.newaxis, :]})  # fctur
+                                   self.addi_inputs: observation['weights'][np.newaxis, :],
+                                   self.keep_prob: 1})  # fctur
             return np.argmax(action_values)
 
         if not test:
@@ -211,6 +209,7 @@ class Dqn_agent:
         action_weights = self.actions[action_idx]
 
         return action_idx, action_weights
+
 
     def store(self, ob, a, r, ob_):
         self.memory.store(ob, a, r, ob_)

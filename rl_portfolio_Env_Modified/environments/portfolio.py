@@ -59,14 +59,14 @@ class DataSrc(object):
 
         # print(self.asset_names)
         self.features = df.columns.levels[1].tolist()
-        print('features:', self.features)
+        # print('features:', self.features)
         data = df.as_matrix().reshape(
             (len(df), len(self.asset_names), len(self.features)))
         self.price_columns = self.features[:3]
-        print(self.price_columns)
+        # print(self.price_columns)
         self.nb_pc = len(self.price_columns)
         self.close_pos = self.price_columns.index('close')
-        print('close_pos:', self.close_pos)
+        # print('close_pos:', self.close_pos)
         self._data = np.transpose(data, (1, 0, 2))
 
         self.mean = self._data.mean(1)
@@ -78,7 +78,7 @@ class DataSrc(object):
             self._data[:, :, self.vol_pos] /= self.mean[:, np.newaxis, self.vol_pos]
 
         if self.talib == False:
-            print('data:', self._data.shape)
+            # print('data:', self._data.shape)
             self._times = df.index
         else:
             talibs_data = talib_features(self._data[:, :, self.close_pos].copy())
@@ -87,7 +87,7 @@ class DataSrc(object):
             talibs_data -= mean[:, np.newaxis, :]
             talibs_data /= std[:, np.newaxis, :]
             self._data = np.concatenate([self._data[:, 50:, :], talibs_data], axis=2)
-            print('data:', self._data.shape)
+            # print('data:', self._data.shape)
             self._times = df.index[50:]
 
     def _step(self):
@@ -242,7 +242,7 @@ class PortfolioSim(object):
             "weights": w0,
             "weights_mean": w0.mean(),
             "weights_std": w0.std(),
-            "cost": c1,
+            "cost": c1*_p0,
         }
 
         # record weights and prices
