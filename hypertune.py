@@ -52,8 +52,7 @@ def construct_config(config, para):
     netc = config["net"]
     envc = config["env"]
     # train
-    # trainc["steps"] = int(para["steps"])
-    trainc["steps"] = para['steps']
+    trainc["steps"] = int(para["steps"])
     trainc["learning_rate"] = para["learning_rate"]
     trainc["division"] = int(para["division"])
     trainc["batch_size"] = int(para["batch_size"])
