@@ -1,5 +1,8 @@
 import numpy as np
-from core.action_dis.action_discretization import action_discretization
+from model.action_dis.action_discretization import action_discretization
+
+# fix training process to compare different set of params
+np.random.seed(5)
 
 
 class Memory:

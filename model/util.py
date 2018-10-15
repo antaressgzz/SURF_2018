@@ -1,5 +1,5 @@
 import numpy as np
-from core.action_dis.action_discretization import action_discretization
+from model.action_dis.action_discretization import action_discretization
 
 def w2c(last_weight_array, actions):
     last_weight_array=last_weight_array.tolist()

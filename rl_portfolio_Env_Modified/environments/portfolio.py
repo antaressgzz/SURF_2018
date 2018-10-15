@@ -17,6 +17,8 @@ from ..callbacks.notebook_plot import LivePlotNotebook
 
 logger = logging.getLogger(__name__)
 
+# fix training process to compare different set of params
+np.random.seed(5)
 
 class DataSrc(object):
     """Acts as data provider for each new episode."""
@@ -89,6 +91,9 @@ class DataSrc(object):
             self._data = np.concatenate([self._data[:, 50:, :], talibs_data], axis=2)
             # print('data:', self._data.shape)
             self._times = df.index[50:]
+
+    def random(self):
+        return np.random.randint(100)
 
     def _step(self):
         # get history matrix from dataframe
