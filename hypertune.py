@@ -12,8 +12,8 @@ from config import get_config
 from math import log
 import sys
 
-EXP_KEY = 1501
-MAX_EVALS = 50
+EXP_KEY = 1700
+MAX_EVALS = 24
 FEE = False
 
 def loguniform(name, low, high):
@@ -113,13 +113,18 @@ def start_commander():
 def worker(index):
     cmd = "hyperopt-mongo-worker --mongo=localhost:27017/hyperopt"
     args = shlex.split(cmd)
-    return Popen(args)
+    process = Popen(args)
+    return process
 
 def start_workers(processes=2):
     p_num = int(processes)
     p = mp.Pool(processes=p_num)
     logging.info("The remaining cpu amount is {}".format(mp.cpu_count()))
-    return p.map(worker, range(0,p_num))
+    pses = p.map(worker, range(0,p_num))
+    return pses
+
+def arrange_cpu():
+    pass
 
 # Write the results in a txt file
 def log_training(trials, best):
