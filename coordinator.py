@@ -9,20 +9,21 @@ import matplotlib.pyplot as plt
 from rl_portfolio_Env_Modified.environments import PortfolioEnv
 import pandas as pd
 import numpy as np
+import pprint
 
 df_train = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1015_30m.hf', key='train')
 df_val = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1015_30m.hf', key='val')
-df_test = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1015_30m.hf', key='test')
+df_test = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_10test_30m.hf', key='test')
 
 
 class Coordinator:
     def __init__(self, config, name):
         # fixed value
         name = name
-        save = False
-        save_period = 0
         asset_num = 5
         feature_num = 4
+
+        pprint.pprint(config)
 
         # env config
         window_length = int(config['env']['window_length'])
@@ -35,18 +36,8 @@ class Coordinator:
         argument = config['env']['argument']
 
         # net config
-        network_config = {
-            'kernels': config['net']['kernels'],
-            'strides': config['net']['strides'],
-            'filters': config['net']['filters'],
-            'regularizer': config['net']['regularizer'],
-            'activation': config['net']['activation'],
-            'fc_size': config['net']['fc_size'],
-            # 'b_initializer': tf.constant_initializer(0),
-            'b_initializer': config['net']['b_initializer'],
-            # 'w_initializer': tf.truncated_normal_initializer(stddev=0.01, seed=0),
-            'w_initializer': config['net']['w_initializer']
-        }
+        network_config = config['net']
+
 
         # training config
         self.total_training_step = config['train']['steps']
@@ -59,6 +50,10 @@ class Coordinator:
         memory_size = config['train']['memory_size']
         upd_tar_prd = config['train']['upd_tar_prd']
         dropout = config['train']['dropout']
+        save = config['train']['save']
+        save_period = config['train']['save_period']
+
+        self.config = config
 
 
         self.agent = Dqn_agent(asset_num,
@@ -97,7 +92,6 @@ class Coordinator:
                                norm=norm,
                                random_reset=False)
 
-
     def evaluate(self):
         val_rs, tr_rs = self.train()
         return val_rs, tr_rs
@@ -133,19 +127,20 @@ class Coordinator:
             observation = self.env_train.reset()
             while True:
                 action_idx, action = self.agent.choose_action(observation)
+                # print('ob:', observation['history'][:, -4:, :]/1000+1)
                 observation_, reward, done, info = self.env_train.step(action)
+                # print('ob_:', observation_['history'][:, -4:, :]/1000+1)
+                # y = 1 / ( observation_['history'][:, -2, 2] / 1000 + 1)
+                # y = np.concatenate([[1], y])  # add cash price
+                # r = np.log(np.dot(y, action))
+                # print('r should be:', r)
+                # print('env gives:', reward)
                 self.rewards.append(reward)
                 reward *= self.reward_scale
                 # reward = np.clip(reward, -1, 1)
                 self.agent.store(observation, action_idx, reward, observation_)
-                # print('-----------------')
-                # print('observation', observation['history'][0, 1:10, :])
-                # print('observation_', observation_['history'][0, 1:10, :])
-
                 observation = observation_
                 if self.agent.start_replay():
-                    # if training_step % 500 == 0:
-                    #     print(reward)
                     if self.agent.memory_cnt() % self.replay_period == 0:
                         self.agent.replay()  # update target
                         training_step = self.agent.get_training_step()
@@ -154,9 +149,10 @@ class Coordinator:
                             train_r = np.sum(self.rewards[-num_r:]) / num_r
                             self.train_rs.append(train_r)
                             val_r = get_val_reward()
+                            if mode != 'auto':
+                                print('training_step: {}, epsilon: {:.2f}, train_r: {:.2e}, val_r:{:.2e}'.format(
+                                    training_step, self.agent.epsilon, train_r, val_r))
                             val_rs.append(val_r)
-                            # print('training_step: {}, epsilon: {:.2f}, train_r: {:.2e}, val_r:{:.2e}'.format(
-                            # training_step, self.agent.epsilon, train_r, val_r))
                 if done:
                     break
 
@@ -174,24 +170,46 @@ class Coordinator:
             return val_rs, self.train_rs
 
 
-    def back_test(self, env_test, render_mode='usual'):
+    def back_test(self, data_set, steps=8000, random_reset=False):
+        if data_set == 'val':
+            df = df_val
+        else:
+            df = df_test
+        env_test = PortfolioEnv(df,
+                               steps=steps,
+                               # trading_cost=self.config['env']['trading_cost'],
+                                trading_cost=0.0,
+                               window_length=self.config['env']['window_length'],
+                               talib=self.config['env']['talib'],
+                               augment=self.config['env']['argument'],
+                               input=self.config['env']['input'],
+                               norm=self.config['env']['norm'],
+                               random_reset=random_reset)
         ob = env_test.reset()
-#         print(ob['history'][0, -10:, 2])
-#         print(self.agent.action_values(ob))
         rewards = 0
         while True:
             action_idx, action = self.agent.choose_action(ob, test=True)
+            # print('_ob:', ob['history'][:, -2:, :])
+            # action = np.random.rand(5)
+            # print(action_idx, action)
             ob, reward, done, _ = env_test.step(action)
+            # print('ob:', ob['history'][:, -2:, :])
+            # print(reward)
+            # print()
+
+            # print(action)
+            # print(reward)
             rewards += reward
             if done:
                 break
 
         print('total rewards:', rewards)
+        print('ave rewards:', rewards / steps)
         df_info = env_test.return_df()
         df_olps = env_test.OLPS_data()
         olps = OLPS(df_olps=df_olps, df_info=df_info, algo="BAH,BestSoFar")
         olps.plot()
-        env_test.render(render_mode)
+        env_test.render('usual')
         sharp, maxDD = env_test.return_SD()
         C_Sharp, C_MDD = olps.IndexComparison(sharp, maxDD)
         print('Sharp ratio Comparison: ', C_Sharp, ' % \nMDD Comparison: ', C_MDD, ' %')

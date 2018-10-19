@@ -12,8 +12,8 @@ from config import get_config
 from math import log
 import sys
 
-EXP_KEY = 1700
-MAX_EVALS = 24
+EXP_KEY = 1901
+MAX_EVALS = 6
 FEE = False
 
 def loguniform(name, low, high):
@@ -27,7 +27,6 @@ param_space = {
     # train
     'steps': hp.quniform("steps", 60000, 120000, 20000),
     'learning_rate': loguniform('learning_rate', 1e-5, 1e-3),
-    # 'discount': hp.uniform('discount', 0, 1),
     'batch_size': hp.choice('batch_size', [16, 32, 64, 128]),
     'replay_period': hp.choice('replay_period', [2, 4, 8, 16]),
     'division': hp.choice('division', [3, 4, 5, 6]),
@@ -35,10 +34,13 @@ param_space = {
     #net
     'activation': hp.choice('activation', ['selu', 'relu', 'leaky_relu']),
     'fc_size': hp.choice('fc_size', [32, 64, 128, 256]),
-    'kernel': [[hp.choice('k_width1', [1, 4]), hp.quniform('k_h1', 3, 10, 1)],      # this needs changing if the assets number changes.
-               [hp.choice('k_width2', [1, 4]), hp.quniform('k_h2', 3, 10, 1)]],
-    'filter': [hp.quniform('filter1', 2, 10, 1), hp.quniform('filter2', 2, 10, 1)],
-    'strides': [hp.quniform('strides1', 1, 5, 1), hp.quniform('strides2', 1, 5, 1)],
+    'kernels': hp.choice('kernels',
+            [[[1, hp.quniform('k_w11', 3, 10, 1)], [4, hp.quniform('k_w12', 3, 10, 1)]],
+            [[4, hp.quniform('k_w21', 3, 10, 1)], [1, hp.quniform('k_w22', 3, 10, 1)]],
+            [[1, hp.quniform('k_w31', 3, 10, 1)], [1, hp.quniform('k_w32', 3, 10, 1)]]]),
+    'filters': [hp.quniform('filter1', 2, 10, 1), hp.quniform('filter2', 2, 10, 1)],
+    'strides': [[1, hp.quniform('strides1', 1, 3, 1)],
+               [1, hp.quniform('strides2', 1, 3, 1)]],
     'regularizer': loguniform('weight_decay', 1e-5, 1e-2),
     # env
     'window_length': hp.quniform('window_length', 50, 300, 50),
@@ -47,29 +49,64 @@ param_space = {
     'argument': loguniform('argument', 1e-6, 1e-3)
 }
 
+param_space_fee = {
+    # train
+    # 'steps': hp.quniform("steps", 100000, 300000, 50000),
+    'learning_rate': loguniform('learning_rate', 1e-5, 1e-3),
+    'process_cost': hp.choice('process_cost', [True, False]),
+    'discount': 1 - hp.loguniform('discount', 1e-5, 1),
+    # 'batch_size': hp.choice('batch_size', [16, 32, 64, 128]),
+    # 'replay_period': hp.choice('replay_period', [2, 4, 8, 16]),
+    'division': hp.choice('division', [3, 4, 5, 6]),
+    'dropout': hp.uniform('dropout', 0.3, 0.8),
+    #net
+    'activation': hp.choice('activation', ['selu', 'relu', 'leaky_relu']),
+    # 'fc1_size': hp.choice('fc_size', [32, 64, 128, 256]),
+    'fc2_size': hp.choice('fc2_size', [32, 64, 128, 256]),
+    'upd_tar_prd': hp.quniform("upd_tar_prd", 1000, 10000, 1000),
+    # 'kernel': [[hp.choice('k_width1', [1, 4]), hp.quniform('k_h1', 3, 10, 1)],      # this needs changing if the assets number changes.
+    #            [hp.choice('k_width2', [1, 4]), hp.quniform('k_h2', 3, 10, 1)]],
+    # 'filter': [hp.quniform('filter1', 2, 10, 1), hp.quniform('filter2', 2, 10, 1)],
+    # 'strides': [hp.quniform('strides1', 1, 5, 1), hp.quniform('strides2', 1, 5, 1)],
+    'regularizer': loguniform('weight_decay', 1e-5, 1e-2),
+    # env
+    # 'window_length': hp.quniform('window_length', 50, 300, 50),
+    # 'input': hp.choice('input', ['rf', 'price']),
+    # 'norm': hp.choice('norm', ['latest_close', 'previous']),
+    # 'argument': loguniform('argument', 1e-6, 1e-3)
+}
+
+
 def construct_config(config, para):
     trainc = config["train"]
     netc = config["net"]
     envc = config["env"]
     # train
-    trainc["steps"] = int(para["steps"])
+    # trainc["steps"] = int(para["steps"])
+    trainc["steps"] = 1000
     trainc["learning_rate"] = para["learning_rate"]
     trainc["division"] = int(para["division"])
+    # trainc["upd_tar_prd"] = int(para["upd_tar_prd"])
     trainc["batch_size"] = int(para["batch_size"])
     trainc["replay_period"] = int(para['replay_period'])
     # trainc["discount"] = para["discount"]
     trainc['dropout'] = para['dropout']
+    trainc['save'] = False
+    trainc['save_period'] = 0
     # env
     envc["window_length"] = int(para["window_length"])
     envc['input'] = para['input']
     envc['norm'] = para['norm']
     envc['argument'] = para['argument']
     # net
-    netc['activaton'] = para['activation']
-    netc['fc_size'] = para['fc_size']
-    netc['kernel'] = [list(map(int, k)) for k in para['kernel']]
-    netc['filter'] = list(map(int, para['filter']))
-    netc['strides'] = list(map(int, para['strides']))
+    netc['activation'] = para['activation']
+    if FEE == True:
+        netc['fc2_size'] = para['fc2_size']
+    else:
+        netc['fc_size'] = para['fc_size']
+    netc['kernels'] = [list(map(int, k)) for k in para['kernels']]
+    netc['filters'] = list(map(int, para['filters']))
+    netc['strides'] = [list(map(int, k)) for k in para['strides']]
     netc['regularizer'] = para['regularizer']
     return config
 
@@ -79,7 +116,6 @@ def train_one(tuning_params):
     start = time.time()
     config = get_config(FEE)
     config = construct_config(config, tuning_params)
-    print('start_new')
     coo = Coordinator(config, str(EXP_KEY))
     val_rewards, tr_rs = coo.evaluate()
     loss = -1 * np.mean(val_rewards[-4:]) * 1e6
@@ -122,9 +158,6 @@ def start_workers(processes=2):
     logging.info("The remaining cpu amount is {}".format(mp.cpu_count()))
     pses = p.map(worker, range(0,p_num))
     return pses
-
-def arrange_cpu():
-    pass
 
 # Write the results in a txt file
 def log_training(trials, best):

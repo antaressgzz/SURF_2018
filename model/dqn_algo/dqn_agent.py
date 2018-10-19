@@ -5,16 +5,12 @@ import tensorflow as tf
 import tensorflow.contrib.layers as layers
 import os
 from model.config import network_config
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-CUDA_VISIBLE_DEVICES=" "
-
 # fix training process to compare different set of params
 np.random.seed(5)
 
 class Dqn_agent:
     def __init__(self, asset_num, division, feature_num, gamma,
-                 network_topology=network_config['cnn_fc'],
+                 network_topology=network_config,
                  learning_rate=0.00025,
                  epsilon=1, epsilon_Min=0.1,
                  dropout=0.5,
@@ -54,6 +50,7 @@ class Dqn_agent:
         network_topology['output_num'] = self.action_num
 
         self.network_config = network_topology
+        # print(network_topology)
         self.initialize_graph()
         self.sess.run(tf.global_variables_initializer())
 
@@ -136,7 +133,7 @@ class Dqn_agent:
                                      kernel_regularizer=regularizer, bias_regularizer=regularizer,
                                      kernel_initializer=w_initializer, bias_initializer=b_initializer,
                                      padding="VALID", name=self.name+'conv'+str(i))
-            # print('conv:', conv.shape)
+            # print('conv:'+str(i), conv.shape)
 
 
         fc_input = tf.layers.flatten(conv)
@@ -173,10 +170,12 @@ class Dqn_agent:
     def replay(self):
         obs, action_batch, reward_batch, obs_ = self.memory.sample()
 
-        q_values_next = self.sess.run(self.q_pred, feed_dict={self.price_his: obs_['history'], self.addi_inputs:obs_['weights'],
+        q_values_next = self.sess.run(self.q_pred, feed_dict={self.price_his: obs_['history'],
+                                                              self.addi_inputs:obs_['weights'],
                                                               self.keep_prob: self.dropout})
         best_actions = np.argmax(q_values_next, axis=1)
-        q_values_next_target = self.sess.run(self.tar_pred, feed_dict={self.price_his_: obs_['history'], self.addi_inputs_:obs_['weights'],
+        q_values_next_target = self.sess.run(self.tar_pred, feed_dict={self.price_his_: obs_['history'],
+                                                                       self.addi_inputs_:obs_['weights'],
                                                                        self.keep_prob: self.dropout})
         targets_batch = reward_batch + self.gamma * q_values_next_target[np.arange(len(action_batch)), best_actions]
 
