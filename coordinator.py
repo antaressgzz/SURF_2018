@@ -52,6 +52,7 @@ class Coordinator:
         dropout = config['train']['dropout']
         save = config['train']['save']
         save_period = config['train']['save_period']
+        GPU = config['train']['GPU']
 
         self.config = config
 
@@ -70,7 +71,8 @@ class Coordinator:
                               history_length=window_length,
                               save=save,
                               save_period=save_period,
-                              name=name)
+                              name=name,
+                              GPU=GPU)
 
         self.env_train = PortfolioEnv(df_train,
                                  steps=1000,

@@ -20,7 +20,8 @@ def getProcess(pName, level=5):
 def reallocate_cpu(process_lst):
     cpu_num = psutil.cpu_count()
     # if cpu_num == 4:
-    cpus = ['0-1', '1-2', '2-3', '4-5', '5-6', '6-7' , '8-9', '9-10', '10-11', '12-13', '13-14', '14-15']
+#     cpus = ['0-1', '1-2', '2-3', '4-5', '5-6', '6-7' , '8-9', '9-10', '10-11', '12-13', '13-14', '14-15']
+    cpus = ['0-1', '2-3', '4-5', '6-7', '8-9', '10', '11', '12', '13', '14', '15']
     for i in range(len(process_lst)):
         print('taskset -cp '+cpus[i]+ ' ' + str(process_lst[i]))
         os.system('taskset -cp '+cpus[i]+ ' ' + str(process_lst[i]))
@@ -29,7 +30,7 @@ def reallocate_cpu(process_lst):
 if __name__ == '__main__':
     while True:
         print('cpu_usage:', psutil.cpu_percent(interval=1))
-        if psutil.cpu_percent(interval=1) <= 80:
+        if psutil.cpu_percent(interval=1) <= 90:
             process_lst = getProcess('Python', 10)
             print('process_lis:', process_lst)
             reallocate_cpu(process_lst)

@@ -5,6 +5,7 @@ import tensorflow as tf
 import tensorflow.contrib.layers as layers
 import os
 from model.config import network_config
+
 # fix training process to compare different set of params
 np.random.seed(5)
 
@@ -41,10 +42,10 @@ class Dqn_agent:
         self.action_num, self.actions = action_discretization(self.asset_num, self.division)
         config = tf.ConfigProto()
 
-        # if not GPU:
-        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-        # else:
-            # config.gpu_options.allow_growth = True
+        if not GPU:
+            os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+        else:
+            config.gpu_options.allow_growth = True
         self.sess = tf.Session(config=config)
 
         network_topology['output_num'] = self.action_num

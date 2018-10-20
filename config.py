@@ -43,6 +43,7 @@ def get_config(fee):
                 'dropout': 0.5,
                 'save': True,
                 'save_period': 40000,
+                'GPU': True
         }
         if fee is True:
                 config['net'] = config_fee
