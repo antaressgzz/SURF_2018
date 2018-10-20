@@ -14,7 +14,7 @@ import sys
 import json
 
 EXP_KEY = 2005
-MAX_EVALS = 50
+MAX_EVALS = 64
 FEE = False
 losses = []
 model_counter = 0
@@ -86,8 +86,8 @@ def construct_config(config, para):
     netc = config["net"]
     envc = config["env"]
     # train
-    # trainc["steps"] = int(para["steps"])
-    trainc["steps"] = 1001
+    trainc["steps"] = int(para["steps"])
+    # trainc["steps"] = 1001
     trainc["learning_rate"] = para["learning_rate"]
     trainc["division"] = int(para["division"])
     # trainc["upd_tar_prd"] = int(para["upd_tar_prd"])
