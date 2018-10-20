@@ -26,16 +26,16 @@ else:
         # net
         'activation': 'relu',
         'fc_size': 32,
-        'kernel': [[1, 3],
-                   [1, 4]],
-        'filter': [6, 5],
-        'strides': [2, 1],
+        'kernels': [[1, 3],
+                   [1, 3]],
+        'filters': [3, 3],
+        'strides': [[2, 2], [1, 1]],
         'regularizer': 0.000697715451566933,
         # env
         'window_length': 100,
         'input': 'rf',
         'norm': 'latest_close',
-        'argument': 0.0008350980747582693,
+        'argument': 0.08,
     }
     config = get_config(False)
     # config['train'] = {
@@ -46,7 +46,7 @@ else:
     model = Coordinator(config, '1700')
     # model.train('single', True)
     model.restore('1700-120000')
-    model.back_test('test', 5800, False)
+    model.back_test('val', 1000, False)
 
 # from rl_portfolio_Env_Modified.environments.portfolio import PortfolioEnv
 # import pandas as pd

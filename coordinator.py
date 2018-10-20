@@ -13,7 +13,7 @@ import pprint
 
 df_train = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1015_30m.hf', key='train')
 df_val = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1015_30m.hf', key='val')
-df_test = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_10test_30m.hf', key='test')
+df_test = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1015_30m.hf', key='test')
 
 
 class Coordinator:
@@ -33,7 +33,6 @@ class Coordinator:
         if talib == True:
             feature_num += 2
         trading_cost = config['env']['trading_cost']
-        argument = config['env']['argument']
 
         # net config
         network_config = config['net']
@@ -79,7 +78,6 @@ class Coordinator:
                                  trading_cost=trading_cost,
                                  window_length=window_length,
                                  talib=talib,
-                                 augment=argument,
                                  input=input,
                                  norm=norm,
                                  random_reset=True)
@@ -89,7 +87,6 @@ class Coordinator:
                                trading_cost=trading_cost,
                                window_length=window_length,
                                talib=talib,
-                               augment=argument,
                                input=input,
                                norm=norm,
                                random_reset=False)
@@ -183,11 +180,11 @@ class Coordinator:
                                 trading_cost=0.0,
                                window_length=self.config['env']['window_length'],
                                talib=self.config['env']['talib'],
-                               augment=self.config['env']['argument'],
                                input=self.config['env']['input'],
                                norm=self.config['env']['norm'],
                                random_reset=random_reset)
         ob = env_test.reset()
+
         rewards = 0
         while True:
             action_idx, action = self.agent.choose_action(ob, test=True)

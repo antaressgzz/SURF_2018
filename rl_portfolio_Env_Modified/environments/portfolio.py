@@ -17,9 +17,6 @@ from ..callbacks.notebook_plot import LivePlotNotebook
 
 logger = logging.getLogger(__name__)
 
-# fix training process to compare different set of params
-# np.random.seed(5)
-
 class DataSrc(object):
     """Acts as data provider for each new episode."""
 
@@ -100,9 +97,12 @@ class DataSrc(object):
         data_window = self.data[:, self.step*self.trade_period+1:self.step*self.trade_period+1+
                                              self.window_length].copy()
 
+        # print(data_window)
+
         # (eq.1) prices
         y1 = data_window[:, -1, self.close_pos].copy() / data_window[:, -self.trade_period-1, self.close_pos].copy()
         y1 = np.concatenate([[1.0], y1])  # add cash price
+        # print(y1)
 
         if self.norm == 'latest_close':
             last_close_price = data_window[:, -1, self.close_pos].copy()
@@ -153,15 +153,15 @@ class DataSrc(object):
 
         self.times = self._times[self.idx -
                                  self.window_length-1:self.idx+self.steps*self.trade_period+1]
-        # augment data to prevent overfitting
-        for i in range(len(self.asset_names)):
-            for j in range(len(self.price_columns)):
-                self.data[i, :, j] += \
-                np.random.normal(loc=0, scale=self.augment*self.mean[i, j], size=self.data[i, :, j].shape)
-
-        if len(self.features) == 4:
-            self.data[:, :, self.vol_pos] += \
-                np.random.normal(loc=0, scale=1000*self.augment, size=self.data[:, :, self.vol_pos].shape)
+        # # augment data to prevent overfitting
+        # for i in range(len(self.asset_names)):
+        #     for j in range(len(self.price_columns)):
+        #         self.data[i, :, j] += self.augment * self.mean[i, j] * np.random.randn(self.data[i, :, j].shape[0])
+        #         print(np.random.randn(self.data[i, :, j].shape[0]))
+        #
+        # if len(self.features) == 4:
+        #     self.data[:, :, self.vol_pos] += \
+        #         np.random.normal(loc=0, scale=1000*self.augment, size=self.data[:, :, self.vol_pos].shape)
 
     def OLPS_data(self):
 

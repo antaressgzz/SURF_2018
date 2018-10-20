@@ -29,7 +29,6 @@ def get_config(fee):
                 'input': 'rf',
                 'norm': 'lastest_close',
                 'talib': False,
-                'argument': 0.0008350980747582693
                 }
         config['train'] = {
                 'learning_rate': 0.0003891689485800337,
@@ -41,9 +40,9 @@ def get_config(fee):
                 'memory_size': 20000,
                 'upd_tar_prd': 2000,
                 'dropout': 0.5,
-                'save': True,
+                'save': False,
                 'save_period': 40000,
-                'GPU': True
+                'GPU': False
         }
         if fee is True:
                 config['net'] = config_fee

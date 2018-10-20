@@ -6,9 +6,6 @@ import tensorflow.contrib.layers as layers
 import os
 from model.config import network_config
 
-# fix training process to compare different set of params
-np.random.seed(5)
-
 class Dqn_agent:
     def __init__(self, asset_num, division, feature_num, gamma,
                  network_topology=network_config,

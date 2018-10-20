@@ -11,10 +11,15 @@ import pprint
 from config import get_config
 from math import log
 import sys
+import json
 
-EXP_KEY = 1901
-MAX_EVALS = 6
+EXP_KEY = 2005
+MAX_EVALS = 50
 FEE = False
+losses = []
+model_counter = 0
+f = open('./logs/' + str(EXP_KEY) + '.json', 'a')
+
 
 def loguniform(name, low, high):
     return hp.loguniform(name, log(low), log(high))
@@ -25,12 +30,13 @@ def qloguniform(name, low, high, q):
 # Search space
 param_space = {
     # train
-    'steps': hp.quniform("steps", 60000, 120000, 20000),
+    # 'steps': hp.quniform("steps", 60000, 120000, 20000),
     'learning_rate': loguniform('learning_rate', 1e-5, 1e-3),
     'batch_size': hp.choice('batch_size', [16, 32, 64, 128]),
     'replay_period': hp.choice('replay_period', [2, 4, 8, 16]),
     'division': hp.choice('division', [3, 4, 5, 6]),
     'dropout': hp.uniform('dropout', 0.3, 0.8),
+    'reward_scale': hp.quniform('reward_scale', 100, 200, 2100),
     #net
     'activation': hp.choice('activation', ['selu', 'relu', 'leaky_relu']),
     'fc_size': hp.choice('fc_size', [32, 64, 128, 256]),
@@ -46,7 +52,6 @@ param_space = {
     'window_length': hp.quniform('window_length', 50, 300, 50),
     'input': hp.choice('input', ['rf', 'price']),
     'norm': hp.choice('norm', ['latest_close', 'previous']),
-    'argument': loguniform('argument', 1e-6, 1e-3)
 }
 
 param_space_fee = {
@@ -73,7 +78,6 @@ param_space_fee = {
     # 'window_length': hp.quniform('window_length', 50, 300, 50),
     # 'input': hp.choice('input', ['rf', 'price']),
     # 'norm': hp.choice('norm', ['latest_close', 'previous']),
-    # 'argument': loguniform('argument', 1e-6, 1e-3)
 }
 
 
@@ -83,7 +87,7 @@ def construct_config(config, para):
     envc = config["env"]
     # train
     # trainc["steps"] = int(para["steps"])
-    trainc["steps"] = 1000
+    trainc["steps"] = 1001
     trainc["learning_rate"] = para["learning_rate"]
     trainc["division"] = int(para["division"])
     # trainc["upd_tar_prd"] = int(para["upd_tar_prd"])
@@ -91,14 +95,13 @@ def construct_config(config, para):
     trainc["replay_period"] = int(para['replay_period'])
     # trainc["discount"] = para["discount"]
     trainc['dropout'] = para['dropout']
-    trainc['save'] = False
-    trainc['save_period'] = 0
+    trainc['reward_scale'] = para['reward_scale']
     # env
     envc["window_length"] = int(para["window_length"])
     envc['input'] = para['input']
     envc['norm'] = para['norm']
-    envc['argument'] = para['argument']
     # net
+    print(para)
     netc['activation'] = para['activation']
     if FEE == True:
         netc['fc2_size'] = para['fc2_size']
@@ -119,12 +122,13 @@ def train_one(tuning_params):
     coo = Coordinator(config, str(EXP_KEY))
     val_rewards, tr_rs = coo.evaluate()
     loss = -1 * np.mean(val_rewards[-4:]) * 1e6
+    eval_time = time.time() - start
+    log_training(config, val_rewards, tr_rs, loss, eval_time)
     result = {
               'loss': loss,
               'status': STATUS_OK,
               'val': val_rewards,
               'train': tr_rs,
-              'eval_time': time.time() - start
               }
     return result
 
@@ -140,8 +144,7 @@ def start_server():
          max_evals=MAX_EVALS,
     )
     pprint.pprint(best)
-    pprint.pprint(trials.trials)
-    log_training(trials.trials, best)
+    # pprint.pprint(trials.trials)
 
 def start_commander():
     mp.Process(target=start_server).start()
@@ -160,16 +163,24 @@ def start_workers(processes=2):
     return pses
 
 # Write the results in a txt file
-def log_training(trials, best):
-    f = open('./logs/'+time.strftime("%Y%m%d%H%M", time.localtime())+'.txt', 'w')
-    losses = []
-    for i in range(MAX_EVALS):
-        dic = trials[i]
-        f.writelines('model：'+str(i)+'\n')
-        losses.append(dic['result']['loss'])
-        f.writelines('exp_key: '+str(dic['exp_key'])+'\n')
-        f.writelines('params: '+str(dic['misc']['vals'])+'\n')
-        f.writelines('result: '+str(dic['result'])+'\n')
-        f.writelines('\n')
-    f.writelines('Best model:'+str(np.argmin(losses))+' Params:'+str(best))
-    f.close()
+def log_training(config, val_rs, tr_rs, loss, eval_time):
+    losses.append(loss)
+    js_dic = json.dumps(config)
+    f.write(js_dic+'\n')
+    global model_counter
+    f.writelines('model'+str(model_counter)+'\n')
+    model_counter += 1
+    f.writelines('val_rewards:'+str(val_rs)+'\n')
+    f.writelines('tra_rewards:'+str(tr_rs)+'\n')
+    f.writelines('loss:'+str(loss)+'\n')
+    f.writelines('eval_time:'+str(eval_time)+'\n')
+    f.writelines('\n')
+
+    # for i in range(MAX_EVALS):
+    #     dic = trials[i]
+    #     f.writelines('model：'+str(i)+'\n')
+    #     losses.append(dic['result']['loss'])
+    #     f.writelines('exp_key: '+str(dic['exp_key'])+'\n')
+    #     f.writelines('params: '+str(dic['misc']['vals'])+'\n')
+    #     f.writelines('result: '+str(dic['result'])+'\n')
+    #     f.writelines('\n')
