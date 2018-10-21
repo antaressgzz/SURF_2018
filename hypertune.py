@@ -13,11 +13,10 @@ from math import log
 import sys
 import json
 
-EXP_KEY = 2005
-MAX_EVALS = 64
+EXP_KEY = 2100
+MAX_EVALS = 50
 FEE = False
 losses = []
-model_counter = 0
 f = open('./logs/' + str(EXP_KEY) + '.json', 'a')
 
 
@@ -30,13 +29,13 @@ def qloguniform(name, low, high, q):
 # Search space
 param_space = {
     # train
-    # 'steps': hp.quniform("steps", 60000, 120000, 20000),
+    'steps': hp.quniform("steps", 60000, 120000, 20000),
     'learning_rate': loguniform('learning_rate', 1e-5, 1e-3),
     'batch_size': hp.choice('batch_size', [16, 32, 64, 128]),
     'replay_period': hp.choice('replay_period', [2, 4, 8, 16]),
     'division': hp.choice('division', [3, 4, 5, 6]),
     'dropout': hp.uniform('dropout', 0.3, 0.8),
-    'reward_scale': hp.quniform('reward_scale', 100, 200, 2100),
+    'reward_scale': hp.quniform('reward_scale', 100, 2100, 200),
     #net
     'activation': hp.choice('activation', ['selu', 'relu', 'leaky_relu']),
     'fc_size': hp.choice('fc_size', [32, 64, 128, 256]),
@@ -86,6 +85,8 @@ def construct_config(config, para):
     netc = config["net"]
     envc = config["env"]
     # train
+    print(trainc)
+    print(para)
     trainc["steps"] = int(para["steps"])
     # trainc["steps"] = 1001
     trainc["learning_rate"] = para["learning_rate"]
@@ -101,7 +102,6 @@ def construct_config(config, para):
     envc['input'] = para['input']
     envc['norm'] = para['norm']
     # net
-    print(para)
     netc['activation'] = para['activation']
     if FEE == True:
         netc['fc2_size'] = para['fc2_size']
@@ -167,9 +167,6 @@ def log_training(config, val_rs, tr_rs, loss, eval_time):
     losses.append(loss)
     js_dic = json.dumps(config)
     f.write(js_dic+'\n')
-    global model_counter
-    f.writelines('model'+str(model_counter)+'\n')
-    model_counter += 1
     f.writelines('val_rewards:'+str(val_rs)+'\n')
     f.writelines('tra_rewards:'+str(tr_rs)+'\n')
     f.writelines('loss:'+str(loss)+'\n')

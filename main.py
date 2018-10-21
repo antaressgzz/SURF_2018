@@ -12,30 +12,30 @@ mode = 'auto'
 
 if mode == 'auto':
     start_commander()
-    workers = start_workers(3)
+    workers = start_workers(6)
 else:
     param_space = {
         # train
-        'steps': 80000,
-        'learning_rate': 0.0003891689485800337,
+        'steps': 150000,
+        'learning_rate': 0.00025,
+        'reward_scale': 1000,
         # 'discount': hp.uniform('discount', 0, 1),
-        'batch_size': 16,
-        'replay_period': 2,
+        'batch_size': 32,
+        'replay_period': 4,
         'division': 4,
         'dropout': 0.7261497109138413,
         # net
-        'activation': 'relu',
-        'fc_size': 32,
+        'activation': 'selu',
+        'fc_size': 128,
         'kernels': [[1, 3],
                    [1, 3]],
         'filters': [3, 3],
-        'strides': [[2, 2], [1, 1]],
+        'strides': [[1, 2], [1, 2]],
         'regularizer': 0.000697715451566933,
         # env
         'window_length': 100,
         'input': 'rf',
         'norm': 'latest_close',
-        'argument': 0.08,
     }
     config = get_config(False)
     # config['train'] = {
@@ -43,10 +43,10 @@ else:
     #         'period': 40000
     # }
     config = construct_config(config, param_space)
-    model = Coordinator(config, '1700')
-    # model.train('single', True)
-    model.restore('1700-120000')
-    model.back_test('val', 1000, False)
+    model = Coordinator(config, '2101')
+    model.train('single', True)
+    # model.restore('1700-120000')
+    # model.back_test('val', 1000, False)
 
 # from rl_portfolio_Env_Modified.environments.portfolio import PortfolioEnv
 # import pandas as pd
