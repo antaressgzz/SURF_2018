@@ -1,3 +1,7 @@
+FEE = False
+EXP_KEY = 2203
+MAX_EVALS = 30
+
 config_fee = {
         'freeze_cnn': False,
         'kernels':[[1, 3], [1, 3]],
@@ -5,10 +9,12 @@ config_fee = {
         'filters':[3, 3],
         'fc1_size':64,
         'fc2_size':64,
+        'padding': 'same',
         'regularizer': 0.000697715451566933,
-        'activation': 'selu',
         'b_initializer': 0,
         'w_initializer': 0.01,
+        'cnn_activation': 'selu',
+        'fc_activation': 'selu'
     }
 
 config_nofee = {
@@ -17,10 +23,11 @@ config_nofee = {
         'filters':[3, 3],
         'padding': 'same',
         'regularizer': 0.000697715451566933,
-        'activation': 'selu',
         'fc_size': 32,
         'b_initializer': 0,
         'w_initializer': 0.01,
+        'cnn_activation': 'selu',
+        'fc_activation': 'selu'
     }
 
 def get_config(fee):
@@ -55,3 +62,60 @@ def get_config(fee):
                 config['env']['trading_cost'] = 0
                 config['train']['discount'] = 0
         return config
+
+param_space = {
+    # train
+    'steps': 240000,
+    'learning_rate': 0.0001270642752036939,
+    'reward_scale': 1200,
+    # 'discount': hp.uniform('discount', 0, 1),
+    'epsilon': 0.1,
+    'batch_size': 128,
+    'replay_period': 8,
+    'division': 3,
+    'dropout': 0.5646002767503104,
+    # net
+    'activation': 'selu',
+    'fc_size': 64,
+    'kernels': [[1, 10],
+                [4, 5]],
+    'filters': [8, 2],
+    'strides': [[1, 2], [1, 3]],
+    'regularizer': 1.0081378980963206e-05,
+    'cnn_activation': 'selu',
+    'fc_activation': 'selu',
+    # env
+    'padding': 'valid',
+    'window_length': 250,
+    'input': 'rf',
+    'norm': 'latest_close',
+}
+
+param_space_fee = {
+    # train
+    'steps': 240000,
+    'learning_rate': 0.0001270642752036939,
+    'reward_scale': 1200,
+    'process_cost': False,
+    'discount': 0.9,
+    'epsilon': 1,
+    'batch_size': 128,
+    'replay_period': 8,
+    'division': 3,
+    'dropout': 0.5646002767503104,
+    # net
+    'fc1_size': 64,
+    'fc2_size': 64,
+    'kernels': [[1, 10],
+                [4, 5]],
+    'filters': [8, 2],
+    'strides': [[1, 2], [1, 3]],
+    'regularizer': 1.0081378980963206e-05,
+    'cnn_activation': 'selu',
+    'fc_activation': 'selu',
+    # env
+    'padding': 'valid',
+    'window_length': 250,
+    'input': 'rf',
+    'norm': 'latest_close',
+}

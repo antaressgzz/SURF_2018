@@ -111,14 +111,19 @@ class Dqn_agent:
         strides = self.network_config['strides']
         filters = self.network_config['filters']
         fc_size = self.network_config['fc_size']
-        padding = self.network_config['padding']
+        # padding = self.network_config['padding']
 
-        if self.network_config['activation'] == 'relu':
-            activation = tf.nn.relu
-        elif self.network_config['activation'] == 'selu':
-            activation = tf.nn.selu
-        else:
-            activation = tf.nn.leaky_relu
+        def set_activation(activation):
+            if activation == 'relu':
+                activation = tf.nn.relu
+            elif activation == 'selu':
+                activation = tf.nn.selu
+            else:
+                activation = tf.nn.leaky_relu
+            return activation
+
+        cnn_activation = set_activation(self.network_config['cnn_activation'])
+        fc_activation = set_activation(self.network_config['fc_activation'])
 
         w_initializer = tf.truncated_normal_initializer(stddev=self.network_config['w_initializer'])
         b_initializer = tf.constant_initializer(self.network_config['b_initializer'])
@@ -128,17 +133,17 @@ class Dqn_agent:
 
         for i in range(len(kernels)):
             conv = tf.layers.conv2d(conv, filters=filters[i], kernel_size=kernels[i], strides=strides[i],
-                                     trainable=True, activation=activation,
+                                     trainable=True, activation=cnn_activation,
                                      kernel_regularizer=regularizer, bias_regularizer=regularizer,
                                      kernel_initializer=w_initializer, bias_initializer=b_initializer,
-                                     padding=padding, name=self.name+'conv'+str(i))
+                                     padding='same', name=self.name+'conv'+str(i))
             # print('conv:'+str(i), conv.shape)
 
 
         fc_input = tf.layers.flatten(conv)
         # print('fc_input:', fc_input.shape)
 
-        fc1 = layers.fully_connected(fc_input, num_outputs=fc_size, activation_fn=activation,
+        fc1 = layers.fully_connected(fc_input, num_outputs=fc_size, activation_fn=fc_activation,
                                      weights_regularizer=regularizer,
                                      weights_initializer=w_initializer,
                                      biases_regularizer=regularizer,

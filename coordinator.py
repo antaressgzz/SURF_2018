@@ -4,12 +4,15 @@ current_path = os.path.abspath(__file__)
 OLPS_path = os.path.abspath(os.path.dirname(current_path) + os.path.sep + 'OLPS/OLPS_modified')
 sys.path.append(OLPS_path)
 from OLPS.olps import OLPS
-from model.dqn_algo.dqn_agent import Dqn_agent
 import matplotlib.pyplot as plt
 from rl_portfolio_Env_Modified.environments import PortfolioEnv
 import pandas as pd
 import numpy as np
 import pprint
+from config import FEE
+if FEE : from model.dqn_algo.dqn_agent_fee import Dqn_agent
+else: from model.dqn_algo.dqn_agent import Dqn_agent
+
 
 df_train = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1015_30m.hf', key='train')
 df_val = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1015_30m.hf', key='val')

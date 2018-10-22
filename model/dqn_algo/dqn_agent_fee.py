@@ -1,17 +1,21 @@
 import numpy as np
-from core.memory.memory import Memory
-from core.action_dis.action_discretization import action_discretization
-from .graph_builder import Graph_builder
+from model.memory.memory import Memory
+from model.action_dis.action_discretization import action_discretization
 import tensorflow as tf
 import tensorflow.contrib.layers as layers
 import os
-from core.config import network_config
+from model.config import network_config
 from ..util import w2c
+# fix training process to compare different set of params
+np.random.seed(5)
 
 class Dqn_agent:
     def __init__(self, asset_num, division, feature_num, gamma,
-                 network_topology=network_config['cnn_fc'],
-                 epsilon=1, epsilon_Min=0.1, epsilon_decay_period=100000,
+                 network_topology=network_config,
+                 epsilon=1, epsilon_Min=0.1,
+                 learning_rate=0.00025,
+                 dropout=0.5,
+                 epsilon_decay_period=100000,
                  update_tar_period=1000,
                  history_length=50,
                  process_cost=False,
@@ -24,6 +28,7 @@ class Dqn_agent:
 
         self.epsilon = epsilon
         self.epsilon_min = epsilon_Min
+        self.dropout = dropout
         self.epsilon_decay_period = epsilon_decay_period
         self.asset_num = asset_num
         self.division = division
@@ -36,6 +41,7 @@ class Dqn_agent:
         self.global_step = tf.Variable(0, trainable=False)
         # self.lr = tf.train.exponential_decay(learning_rate=0.01, global_step=self.global_step,
         #                                      decay_steps=learning_rate_decay_step, decay_rate=0.9)
+        self.lr = learning_rate
         self.action_num, self.actions = action_discretization(self.asset_num, self.division)
         config = tf.ConfigProto()
 
@@ -77,6 +83,8 @@ class Dqn_agent:
 
         self.r = tf.placeholder(dtype=tf.float32, shape=[None, ], name='r')
         self.a = tf.placeholder(dtype=tf.int32, shape=[None, ], name='a')
+        self.keep_prob = tf.placeholder(tf.float32)
+
 
         # Training network
         with tf.variable_scope('estm_net'):
@@ -100,11 +108,11 @@ class Dqn_agent:
             self.loss = tf.reduce_mean(square)
 
         with tf.name_scope('train'):
-            self.optimizer = tf.train.RMSPropOptimizer(0.00025, 0.95, 0.0, 1e-6)
+            self.optimizer = tf.train.RMSPropOptimizer(self.lr, 0.95, 0.0, 1e-6)
             self.train_op = self.optimizer.minimize(self.loss, global_step=self.global_step)
 
-        t_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='target_net')
-        e_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='estm_net')
+        t_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='target_net'+self.name)
+        e_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='estm_net'+self.name)
         self.update_target = [tf.assign(t, l) for t, l in zip(t_params, e_params)]
 
 
@@ -115,42 +123,56 @@ class Dqn_agent:
         filters = self.network_config['filters']
         fc1_size = self.network_config['fc1_size']
         fc2_size = self.network_config['fc2_size']
-        activation = self.network_config['activation']
-        w_initializer = self.network_config['w_initializer']
-        b_initializer = self.network_config['b_initializer']
-        regularizer = self.network_config['regularizer']
+
+        def set_activation(activation):
+            if activation == 'relu':
+                activation = tf.nn.relu
+            elif activation == 'selu':
+                activation = tf.nn.selu
+            else:
+                activation = tf.nn.leaky_relu
+            return activation
+
+        cnn_activation = set_activation(self.network_config['cnn_activation'])
+        fc_activation = set_activation(self.network_config['fc_activation'])
+        w_initializer = tf.truncated_normal_initializer(stddev=self.network_config['w_initializer'])
+        b_initializer = tf.constant_initializer(self.network_config['b_initializer'])
+        regularizer = layers.l2_regularizer(self.network_config['regularizer'])
 
         conv = price_his
 
         for i in range(len(kernels)):
             conv = tf.layers.conv2d(conv, filters=filters[i], kernel_size=kernels[i], strides=strides[i],
-                                     trainable=train_cnn, activation=activation,
+                                     trainable=train_cnn, activation=cnn_activation,
                                      kernel_regularizer=regularizer, bias_regularizer=regularizer,
                                      kernel_initializer=w_initializer, bias_initializer=b_initializer,
-                                     padding="VALID", name='conv'+str(i))
-            print('conv:', conv.shape)
+                                     padding="same", name=self.name+'conv'+str(i))
+            # print('conv:', conv.shape)
 
         conv_flatten = tf.layers.flatten(conv)
 
-        print('conv_flatten:', conv_flatten.shape)
+        # print('conv_flatten:', conv_flatten.shape)
 
-        fc1 = layers.fully_connected(conv_flatten, num_outputs=fc1_size, activation_fn=activation,
+        fc1 = layers.fully_connected(conv_flatten, num_outputs=fc1_size, activation_fn=fc_activation,
                                            weights_regularizer=regularizer,
                                            weights_initializer=w_initializer,
                                            biases_initializer=b_initializer,
                                            biases_regularizer=regularizer,
                                            trainable=train_cnn, scope='fc1')
+        fc1 = tf.nn.dropout(fc1, self.keep_prob)
+
 
         concat = tf.concat([fc1, addi_input], 1)
-        print('concat', concat.shape)
+        # print('concat', concat.shape)
 
-        fc2 = layers.fully_connected(concat, num_outputs=fc2_size, activation_fn=activation,
+        fc2 = layers.fully_connected(concat, num_outputs=fc2_size, activation_fn=fc_activation,
                                            weights_regularizer=regularizer,
                                            weights_initializer=w_initializer,
                                            biases_initializer=b_initializer,
                                            biases_regularizer=regularizer,
                                            trainable=True, scope='fc2')
-        print('fc2:', fc2.shape)
+        fc2 = tf.nn.dropout(fc2, self.keep_prob)
+
 
         output = layers.fully_connected(fc2, num_outputs=self.action_num, activation_fn=None,
                                         weights_regularizer=regularizer,
@@ -182,17 +204,20 @@ class Dqn_agent:
             cost_ = obs['weights']
 
         q_values_next = self.sess.run(self.q_pred, feed_dict={self.price_his: obs_['history'],
-                                                              self.addi_inputs: cost_})
+                                                              self.addi_inputs: cost_,
+                                                              self.keep_prob: self.dropout})
         best_actions = np.argmax(q_values_next, axis=1)
         q_values_next_target = self.sess.run(self.tar_pred, feed_dict={self.price_his_: obs_['history'],
-                                                                       self.addi_inputs_: cost_})
+                                                                       self.addi_inputs_: cost_,
+                                                                       self.keep_prob: self.dropout})
         targets_batch = reward_batch + self.gamma * q_values_next_target[np.arange(len(action_batch)), best_actions]
 
         # Train
         fd = {self.q_target: targets_batch,
               self.price_his: obs['history'],
               self.addi_inputs: cost,
-              self.a : action_batch}
+              self.a : action_batch,
+              self.keep_prob: self.dropout}
         _, global_step = self.sess.run([self.train_op, self.global_step], feed_dict=fd)
 
         if global_step % self.update_tar_period == 0:
@@ -218,7 +243,8 @@ class Dqn_agent:
         def action_max():
             action_values = self.sess.run(self.q_pred,
                         feed_dict={self.price_his: observation['history'][np.newaxis, :, :, :],
-                                   self.addi_inputs: cost})
+                                   self.addi_inputs: cost,
+                                   self.keep_prob: 1})
             return np.argmax(action_values)
 
         if not test:
