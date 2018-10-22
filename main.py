@@ -4,18 +4,16 @@ current_path = os.getcwd()
 sys.path.append(current_path)
 from hypertune import start_commander, start_workers
 from coordinator import Coordinator
-from config import get_config, param_space_fee, param_space, FEE, EXP_KEY
+from config import get_config, param_space_fee, param_space, FEE, EXP_KEY, mode, name, number_workers
 from hypertune import construct_config
 # %matplotlib inline
 
-mode = 'single'
-name = '2200'
 
 if mode == 'auto':
     start_commander()
-    workers = start_workers(4)
+    workers = start_workers(number_workers)
 else:
-    config = get_config(False)
+    config = get_config(FEE)
     if FEE:
         params = param_space_fee
     else:

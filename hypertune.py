@@ -57,7 +57,7 @@ param_space_fee = {
     'steps': hp.quniform("steps", 100000, 280000, 40000),
     'learning_rate': loguniform('learning_rate', 1e-5, 1e-3),
     'process_cost': hp.choice('process_cost', [True, False]),
-    'discount': 1 - hp.loguniform('discount', 1e-5, 1),
+    'discount': 1 - loguniform('discount', 1e-4, 1),
     'batch_size': hp.choice('batch_size', [16, 32, 64, 128]),
     'replay_period': hp.choice('replay_period', [2, 4, 8, 16]),
     'division': hp.choice('division', [3, 4, 5, 6]),
