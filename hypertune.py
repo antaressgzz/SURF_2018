@@ -54,7 +54,7 @@ param_space = {
 
 param_space_fee = {
     # train
-    'steps': hp.quniform("steps", 100000, 280000, 40000),
+    'steps': hp.quniform("steps", 120000, 280000, 40000),
     'learning_rate': loguniform('learning_rate', 1e-5, 1e-3),
     'process_cost': hp.choice('process_cost', [True, False]),
     'discount': 1 - loguniform('discount', 1e-4, 1),

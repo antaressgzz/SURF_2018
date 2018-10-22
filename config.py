@@ -59,7 +59,7 @@ def get_config(fee):
                 'save': save,
                 'save_period': 40000,
                 ##########################
-                'GPU': False
+                'GPU': True
                 ##########################
         }
         if fee is True:
