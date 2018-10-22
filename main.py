@@ -6,9 +6,11 @@ from hypertune import start_commander, start_workers
 from coordinator import Coordinator
 from config import get_config
 from hypertune import construct_config
+# %matplotlib inline
 
 
 mode = 'single'
+name = '2200'
 
 if mode == 'auto':
     start_commander()
@@ -34,6 +36,7 @@ else:
         'strides': [[1, 2], [1, 3]],
         'regularizer': 1.0081378980963206e-05,
         # env
+        'padding': 'valid',
         'window_length': 250,
         'input': 'rf',
         'norm': 'latest_close',
@@ -44,8 +47,8 @@ else:
     #         'period': 40000
     # }
     config = construct_config(config, param_space)
-    model = Coordinator(config, '2102')
-    model.restore('2102-160000')
+    model = Coordinator(config, name)
+    # model.restore('2102-160000')
     model.train('single', True)
     model.back_test('test', 12000, True)
 

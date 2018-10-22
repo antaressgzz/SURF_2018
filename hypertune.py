@@ -47,6 +47,7 @@ param_space = {
     'strides': [[1, hp.quniform('strides1', 1, 3, 1)],
                [1, hp.quniform('strides2', 1, 3, 1)]],
     'regularizer': loguniform('weight_decay', 1e-5, 1e-2),
+    'padding': hp.choice('padding', ['same', 'valid']),
     # env
     'window_length': hp.quniform('window_length', 50, 300, 50),
     'input': hp.choice('input', ['rf', 'price']),
@@ -73,6 +74,8 @@ param_space_fee = {
     # 'filter': [hp.quniform('filter1', 2, 10, 1), hp.quniform('filter2', 2, 10, 1)],
     # 'strides': [hp.quniform('strides1', 1, 5, 1), hp.quniform('strides2', 1, 5, 1)],
     'regularizer': loguniform('weight_decay', 1e-5, 1e-2),
+    'padding': hp.choice('padding', ['same', 'valid']),
+
     # env
     # 'window_length': hp.quniform('window_length', 50, 300, 50),
     # 'input': hp.choice('input', ['rf', 'price']),
@@ -109,6 +112,7 @@ def construct_config(config, para):
     else:
         netc['fc_size'] = para['fc_size']
     netc['kernels'] = [list(map(int, k)) for k in para['kernels']]
+    netc['padding'] = para['padding']
     netc['filters'] = list(map(int, para['filters']))
     netc['strides'] = [list(map(int, k)) for k in para['strides']]
     netc['regularizer'] = para['regularizer']

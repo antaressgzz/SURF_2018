@@ -15,6 +15,7 @@ config_nofee = {
         'kernels':[[1, 3], [1, 3]],
         'strides':[[1, 1], [1, 1]],
         'filters':[3, 3],
+        'padding': 'same',
         'regularizer': 0.000697715451566933,
         'activation': 'selu',
         'fc_size': 32,

@@ -111,6 +111,7 @@ class Dqn_agent:
         strides = self.network_config['strides']
         filters = self.network_config['filters']
         fc_size = self.network_config['fc_size']
+        padding = self.network_config['padding']
 
         if self.network_config['activation'] == 'relu':
             activation = tf.nn.relu
@@ -130,7 +131,7 @@ class Dqn_agent:
                                      trainable=True, activation=activation,
                                      kernel_regularizer=regularizer, bias_regularizer=regularizer,
                                      kernel_initializer=w_initializer, bias_initializer=b_initializer,
-                                     padding="same", name=self.name+'conv'+str(i))
+                                     padding=padding, name=self.name+'conv'+str(i))
             # print('conv:'+str(i), conv.shape)
 
 
