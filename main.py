@@ -8,7 +8,7 @@ from config import get_config
 from hypertune import construct_config
 
 
-mode = 'auto'
+mode = 'single'
 
 if mode == 'auto':
     start_commander()
@@ -16,24 +16,25 @@ if mode == 'auto':
 else:
     param_space = {
         # train
-        'steps': 150000,
-        'learning_rate': 0.00025,
-        'reward_scale': 1000,
+        'steps': 240000,
+        'learning_rate': 0.0001270642752036939,
+        'reward_scale': 1200,
         # 'discount': hp.uniform('discount', 0, 1),
-        'batch_size': 32,
-        'replay_period': 4,
-        'division': 4,
-        'dropout': 0.7261497109138413,
+        'epsilon': 0.1,
+        'batch_size': 128,
+        'replay_period': 8,
+        'division': 3,
+        'dropout': 0.5646002767503104,
         # net
         'activation': 'selu',
-        'fc_size': 128,
-        'kernels': [[1, 3],
-                   [1, 3]],
-        'filters': [3, 3],
-        'strides': [[1, 2], [1, 2]],
-        'regularizer': 0.000697715451566933,
+        'fc_size': 64,
+        'kernels': [[1, 10],
+                   [4, 5]],
+        'filters': [8, 2],
+        'strides': [[1, 2], [1, 3]],
+        'regularizer': 1.0081378980963206e-05,
         # env
-        'window_length': 100,
+        'window_length': 250,
         'input': 'rf',
         'norm': 'latest_close',
     }
@@ -43,10 +44,10 @@ else:
     #         'period': 40000
     # }
     config = construct_config(config, param_space)
-    model = Coordinator(config, '2101')
+    model = Coordinator(config, '2102')
+    model.restore('2102-160000')
     model.train('single', True)
-    # model.restore('1700-120000')
-    # model.back_test('val', 1000, False)
+    model.back_test('test', 12000, True)
 
 # from rl_portfolio_Env_Modified.environments.portfolio import PortfolioEnv
 # import pandas as pd

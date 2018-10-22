@@ -90,6 +90,7 @@ def construct_config(config, para):
     trainc["steps"] = int(para["steps"])
     # trainc["steps"] = 1001
     trainc["learning_rate"] = para["learning_rate"]
+    trainc['epsilon'] = para['epsilon']
     trainc["division"] = int(para["division"])
     # trainc["upd_tar_prd"] = int(para["upd_tar_prd"])
     trainc["batch_size"] = int(para["batch_size"])

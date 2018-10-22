@@ -43,6 +43,7 @@ class Coordinator:
         self.replay_period = config['train']['replay_period']
         self.reward_scale = config['train']['reward_scale']
         learning_rate = config['train']['learning_rate']
+        epsilon = config['train']['epsilon']
         division = config['train']['division']
         gamma = config['train']['discount']
         batch_size = config['train']['batch_size']
@@ -60,6 +61,7 @@ class Coordinator:
                               division,
                               feature_num,
                               gamma,
+                              epsilon=epsilon,
                               learning_rate=learning_rate,
                               network_topology=network_config,
                               update_tar_period=upd_tar_prd,

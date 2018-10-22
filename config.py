@@ -33,6 +33,7 @@ def get_config(fee):
         config['train'] = {
                 'learning_rate': 0.0003891689485800337,
                 'division': 4,
+                'epsilon': 1,
                 'reward_scale': 1000,
                 'batch_size': 16,
                 'steps': 100000,
@@ -40,7 +41,7 @@ def get_config(fee):
                 'memory_size': 20000,
                 'upd_tar_prd': 2000,
                 'dropout': 0.5,
-                'save': False,
+                'save': True,
                 'save_period': 40000,
                 'GPU': False
         }
