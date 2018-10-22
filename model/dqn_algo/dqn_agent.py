@@ -130,7 +130,7 @@ class Dqn_agent:
                                      trainable=True, activation=activation,
                                      kernel_regularizer=regularizer, bias_regularizer=regularizer,
                                      kernel_initializer=w_initializer, bias_initializer=b_initializer,
-                                     padding="VALID", name=self.name+'conv'+str(i))
+                                     padding="same", name=self.name+'conv'+str(i))
             # print('conv:'+str(i), conv.shape)
 
 
