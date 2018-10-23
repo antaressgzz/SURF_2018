@@ -26,7 +26,7 @@ def qloguniform(name, low, high, q):
 # Search space
 param_space = {
     # train
-    'steps': hp.quniform("steps", 100000, 240000, 40000),
+    'steps': hp.quniform("steps", 120000, 240000, 40000),
     'learning_rate': loguniform('learning_rate', 1e-5, 1e-3),
     'batch_size': hp.choice('batch_size', [16, 32, 64, 128]),
     'replay_period': hp.choice('replay_period', [2, 4, 8, 16]),
@@ -131,7 +131,7 @@ def train_one(tuning_params):
     config = construct_config(config, tuning_params)
     coo = Coordinator(config, str(EXP_KEY))
     val_rewards, tr_rs = coo.evaluate()
-    loss = -1 * np.mean(val_rewards[-6:]) * 1e6
+    loss = -1 * np.mean(np.sort(val_rewards[5:])[-6:-1]) * 1e6
     eval_time = time.time() - start
     log_training(config, val_rewards, tr_rs, loss, eval_time)
     result = {

@@ -1,9 +1,9 @@
-FEE = True
-EXP_KEY = 2205
-MAX_EVALS = 30
-number_workers = 4
+FEE = False
+EXP_KEY = 2300
+MAX_EVALS = 200
+number_workers = 12
 mode = 'auto'
-name = '2202'
+name = '2300'
 
 config_fee = {
         'freeze_cnn': False,
