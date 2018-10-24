@@ -1,7 +1,7 @@
 FEE = False
 EXP_KEY = 2300
-MAX_EVALS = 200
-number_workers = 12
+MAX_EVALS = 1
+number_workers = 1
 mode = 'auto'
 name = '2300'
 

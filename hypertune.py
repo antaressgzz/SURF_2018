@@ -183,6 +183,8 @@ def log_training(config, val_rs, tr_rs, loss, eval_time):
     f.write(js_dic+'\n')
     f.writelines('val_rewards:'+str(val_rs)+'\n')
     f.writelines('tra_rewards:'+str(tr_rs)+'\n')
+    if loss < 0:
+        f.writelines('$$$$$$$$$$$$$$$$$$$$$$' '\n')
     f.writelines('loss:'+str(loss)+'\n')
     f.writelines('eval_time:'+str(eval_time)+'\n')
     f.writelines('\n')
