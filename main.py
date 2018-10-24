@@ -13,7 +13,7 @@ if mode == 'parallel':
     start_commander()
     workers = start_workers(number_workers)
 else:
-    model = Coordinator(tuned_config, '-5.28_fee')
-    # model.restore('2102-160000')
+    model = Coordinator(tuned_config, '-5.28')
+    model.restore_price_predictor('-5.28-80000')
     model.train('single', True)
     model.back_test('test', 12000, True)

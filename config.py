@@ -10,7 +10,8 @@ tuned_config = {"env": {"window_length": 200,
                          "norm": "previous",
                          "talib": False,
                          ################## change this ###############
-                         "trading_cost": 0.0},
+                         "trading_cost": 0.0001},
+                         ############### change these #################
      "train": {"learning_rate": 0.00015309751147495794,
                "division": 6,
                "epsilon": 1,
@@ -25,7 +26,8 @@ tuned_config = {"env": {"window_length": 200,
                "save": True,
                "save_period": 40000,
                "GPU": True,
-               "discount": 0},
+               "discount": 0.9},
+                ############### change these #################
      "net": {"kernels": [[1, 10], [4, 4]],
              "strides": [[1, 1], [1, 3]],
              "filters": [4, 4],
@@ -40,7 +42,8 @@ tuned_config = {"env": {"window_length": 200,
              #################### change this ###################
              "fc2_size": 64,
              "process_cost": True,
-             "freeze_cnn": False
+             "freeze_cnn": True
+             ############### change these #################
              }}
 
 def get_config(fee):

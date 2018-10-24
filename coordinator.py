@@ -226,6 +226,9 @@ class Coordinator:
     def restore(self, name):
         self.agent.restore(name)
 
+    def restore_price_predictor(self, name):
+        self.agent.restore_price_predictor(name)
+
     def network_state(self):
         return  self.agent.network_state()
 

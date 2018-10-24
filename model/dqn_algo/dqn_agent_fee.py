@@ -6,6 +6,8 @@ import tensorflow.contrib.layers as layers
 import os
 from model.config import network_config
 from ..util import w2c
+import tensorflow.contrib.slim as slim
+
 
 class Dqn_agent:
     def __init__(self, asset_num, division, feature_num, gamma,
@@ -37,8 +39,6 @@ class Dqn_agent:
         self.process_cost = process_cost
         self.feature_num = feature_num
         self.global_step = tf.Variable(0, trainable=False)
-        # self.lr = tf.train.exponential_decay(learning_rate=0.01, global_step=self.global_step,
-        #                                      decay_steps=learning_rate_decay_step, decay_rate=0.9)
         self.lr = learning_rate
         self.action_num, self.actions = action_discretization(self.asset_num, self.division)
         config = tf.ConfigProto()
@@ -145,8 +145,7 @@ class Dqn_agent:
                                      kernel_regularizer=regularizer, bias_regularizer=regularizer,
                                      kernel_initializer=w_initializer, bias_initializer=b_initializer,
                                      padding="same", name=self.name+'conv'+str(i))
-            # print('conv:', conv.shape)
-
+            # print('conv:', conv.name)
         conv_flatten = tf.layers.flatten(conv)
 
         # print('conv_flatten:', conv_flatten.shape)
@@ -156,7 +155,9 @@ class Dqn_agent:
                                            weights_initializer=w_initializer,
                                            biases_initializer=b_initializer,
                                            biases_regularizer=regularizer,
-                                           trainable=train_cnn, scope='fc1')
+                                           trainable=train_cnn, scope=self.name+'fc1')
+        # print('fc1:', fc1.name)
+
         fc1 = tf.nn.dropout(fc1, self.keep_prob)
 
 
@@ -226,7 +227,7 @@ class Dqn_agent:
             self.writer.add_summary(s, global_step)
 
         if self.save and global_step % self.save_period == 0:
-            self.saver.save(self.sess, 'logs/checkpoint/' + self.name, global_step=global_step)
+            self.saver.save(self.sess, 'logs/checkpoint/' + self.name+'fee', global_step=global_step)
 
         if self.epsilon > self.epsilon_min:
             self.epsilon -= (1 - self.epsilon_min) / self.epsilon_decay_period
@@ -266,6 +267,13 @@ class Dqn_agent:
 
     def get_ave_reward(self):
         return self.memory.get_ave_reward()
+
+    def restore_price_predictor(self, name):
+        variables = slim.get_variables_to_restore()
+        variables_to_restore_frame = [v for v in variables if 'conv' in v.name or 'fc1' in v.name]
+        self.restorer = tf.train.Saver(variables_to_restore_frame)
+        self.restorer.restore(self.sess, 'logs/checkpoint/' + name)
+        # [print(var.name) for var in variables_to_restore_frame]
 
     def restore(self, name):
         self.saver.restore(self.sess, 'logs/checkpoint/' + name)

@@ -6,6 +6,7 @@ import tensorflow.contrib.layers as layers
 import os
 from model.config import network_config
 
+
 class Dqn_agent:
     def __init__(self, asset_num, division, feature_num, gamma,
                  network_topology=network_config,
@@ -110,7 +111,7 @@ class Dqn_agent:
         kernels = self.network_config['kernels']
         strides = self.network_config['strides']
         filters = self.network_config['filters']
-        fc_size = self.network_config['fc_size']
+        fc1_size = self.network_config['fc1_size']
         # padding = self.network_config['padding']
 
         def set_activation(activation):
@@ -137,19 +138,16 @@ class Dqn_agent:
                                      kernel_regularizer=regularizer, bias_regularizer=regularizer,
                                      kernel_initializer=w_initializer, bias_initializer=b_initializer,
                                      padding='same', name=self.name+'conv'+str(i))
-            # print('conv:'+str(i), conv.shape)
-
 
         fc_input = tf.layers.flatten(conv)
         # print('fc_input:', fc_input.shape)
 
-        fc1 = layers.fully_connected(fc_input, num_outputs=fc_size, activation_fn=fc_activation,
+        fc1 = layers.fully_connected(fc_input, num_outputs=fc1_size, activation_fn=fc_activation,
                                      weights_regularizer=regularizer,
                                      weights_initializer=w_initializer,
                                      biases_regularizer=regularizer,
                                      biases_initializer=b_initializer,
                                      trainable=True, scope=self.name+'fc1')
-        # print('fc1:', fc1.shape)
         fc1 = tf.nn.dropout(fc1, self.keep_prob)
 
         output = layers.fully_connected(fc1, num_outputs=self.action_num, activation_fn=None,
