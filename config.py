@@ -21,7 +21,7 @@ tuned_config = {"env": {"window_length": 200,
                "memory_size": 20000,
                "dropout": 0.4893817909286,
                ############### change these #################
-               "upd_tar_prd": 2000,
+               "upd_tar_prd": 1000,
                "steps": 200000,
                "save": True,
                "save_period": 40000,

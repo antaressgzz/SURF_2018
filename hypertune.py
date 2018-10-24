@@ -129,7 +129,7 @@ def train_one(tuning_params):
     start = time.time()
     config = get_config(FEE)
     config = construct_config(config, tuning_params)
-    coo = Coordinator(config, str(EXP_KEY))
+    coo = Coordinator(config, [str(EXP_KEY), ''])
     val_rewards, tr_rs = coo.evaluate()
     loss = -1 * np.mean(np.sort(val_rewards[5:])[-6:-1]) * 1e6
     eval_time = time.time() - start

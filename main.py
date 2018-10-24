@@ -5,15 +5,13 @@ sys.path.append(current_path)
 from hypertune import start_commander, start_workers
 from coordinator import Coordinator
 from config import mode, number_workers, tuned_config
-from hypertune import construct_config
 # %matplotlib inline
-
 
 if mode == 'parallel':
     start_commander()
     workers = start_workers(number_workers)
 else:
-    model = Coordinator(tuned_config, '-5.28')
-    model.restore_price_predictor('-5.28-80000')
+    model = Coordinator(tuned_config, ['-5.28', '_1'])
+    model.restore_price_predictor('-5.28-80000-')
     model.train('single', True)
-    model.back_test('test', 12000, True)
+    model.back_test('test', 20000, True)
