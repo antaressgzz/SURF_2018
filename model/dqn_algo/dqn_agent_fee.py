@@ -33,7 +33,8 @@ class Dqn_agent:
         self.asset_num = asset_num
         self.division = division
         self.gamma = gamma
-        self.name = name
+        self.name = name[0]
+        self.addi_name = name[1]
         self.update_tar_period = update_tar_period
         self.history_length = history_length
         self.process_cost = process_cost
@@ -58,7 +59,7 @@ class Dqn_agent:
         if save:
             self.save = save
             self.save_period = save_period
-            self.name = name
+            # self.name = name
             self.saver = tf.train.Saver()
         else:
             self.save = False
@@ -109,8 +110,8 @@ class Dqn_agent:
             self.optimizer = tf.train.RMSPropOptimizer(self.lr, 0.95, 0.0, 1e-6)
             self.train_op = self.optimizer.minimize(self.loss, global_step=self.global_step)
 
-        t_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='target_net'+self.name)
-        e_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='estm_net'+self.name)
+        t_params = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='target_net')
+        e_params = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='estm_net')
         self.update_target = [tf.assign(t, l) for t, l in zip(t_params, e_params)]
 
 
@@ -189,7 +190,7 @@ class Dqn_agent:
         tf.summary.scalar("max_q_value", tf.reduce_max(self.q_pred))
         tf.summary.histogram('fc_input', self.fc_input)
         self.merged = tf.summary.merge_all()
-        self.writer = tf.summary.FileWriter("logs/train/" + self.name, self.sess.graph)
+        self.writer = tf.summary.FileWriter("logs/train/"+self.name+self.addi_name, self.sess.graph)
         self.tensorboard = True
 
     def replay(self):
@@ -227,7 +228,7 @@ class Dqn_agent:
             self.writer.add_summary(s, global_step)
 
         if self.save and global_step % self.save_period == 0:
-            self.saver.save(self.sess, 'logs/checkpoint/' + self.name+'fee', global_step=global_step)
+            self.saver.save(self.sess, 'logs/checkpoint/' + self.name+self.addi_name, global_step=global_step)
 
         if self.epsilon > self.epsilon_min:
             self.epsilon -= (1 - self.epsilon_min) / self.epsilon_decay_period
