@@ -3,10 +3,10 @@ EXP_KEY = 23225
 MAX_EVALS = 3
 number_workers = 3
 mode = 'single'
-asset_group = 1
+asset_group = 3
 name = '-5.28_ag'+str(asset_group)
 abspath = '/Users/zhangziyang/PycharmProjects/SURF_2019/'
-set_group = ['JPYGBPEURCAD', 'JPYCHFEURCAD']
+set_group = ['JPYGBPEURCAD', 'JPYCHFGBPCAD', 'CHFGBPCADEUR', 'JPYCHFCADEUR', 'JPYCHFGBPEUR']
 group = set_group[asset_group]
 
 

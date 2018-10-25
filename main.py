@@ -12,7 +12,7 @@ if mode == 'parallel':
     workers = start_workers(number_workers)
 else:
     # model = Coordinator(tuned_config, ['-5.28', '_1'])
-    model = Coordinator(tuned_config, '-5.28_ag1')
+    model = Coordinator(tuned_config, '-5.28_ag3')
     # model.restore_price_predictor('-5.28-80000-')
     model.train('single', True)
     model.back_test('test', 20000, True)
