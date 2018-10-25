@@ -1,18 +1,22 @@
-FEE = True
-EXP_KEY = 23223
+FEE = False
+EXP_KEY = 23225
 MAX_EVALS = 3
 number_workers = 3
-name = '-5.28'
-mode = 'parallel'
+mode = 'single'
+asset_group = 1
+name = '-5.28_ag'+str(asset_group)
 abspath = '/Users/zhangziyang/PycharmProjects/SURF_2019/'
+set_group = ['JPYGBPEURCAD', 'JPYCHFEURCAD']
+group = set_group[asset_group]
 
 
 tuned_config = {"env": {"window_length": 200,
                          "input": "rf",
                          "norm": "previous",
                          "talib": False,
+                         "trading_period": 1,
                          ################## change this ###############
-                         "trading_cost": 0.0001},
+                         "trading_cost": 0.0},
                          ############### change these #################
      "train": {"learning_rate": 0.00015309751147495794,
                "division": 6,
@@ -24,11 +28,11 @@ tuned_config = {"env": {"window_length": 200,
                "dropout": 0.4893817909286,
                ############### change these #################
                "upd_tar_prd": 1000,
-               "steps": 120000,
+               "steps": 200000,
                "save": True,
                "save_period": 40000,
-               "GPU": True,
-               "discount": 0.9},
+               "GPU": False,
+               "discount": 0.0},
                 ############### change these #################
      "net": {"kernels": [[1, 10], [4, 4]],
              "strides": [[1, 1], [1, 3]],
@@ -44,7 +48,7 @@ tuned_config = {"env": {"window_length": 200,
              #################### change this ###################
              "fc2_size": 64,
              "process_cost": True,
-             "freeze_cnn": True
+             "freeze_cnn": False
              ############### change these #################
              }}
 
@@ -52,6 +56,7 @@ def get_config(fee):
         config = {}
         config['env'] = {
                 'window_length': 100,
+                'trading_period': 1,
                 'input': 'rf',
                 'norm': 'lastest_close',
                 'talib': False,

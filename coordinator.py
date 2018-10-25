@@ -9,14 +9,14 @@ from rl_portfolio_Env_Modified.environments import PortfolioEnv
 import pandas as pd
 import numpy as np
 import pprint
-from config import FEE
+from config import FEE, group
 if FEE : from model.dqn_algo.dqn_agent_fee import Dqn_agent
 else: from model.dqn_algo.dqn_agent import Dqn_agent
 
 
-df_train = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1015_30m.hf', key='train')
-df_val = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1015_30m.hf', key='val')
-df_test = pd.read_hdf('./data/data_raw/JPYGBPEURCAD_4f_1015_30m.hf', key='test')
+df_train = pd.read_hdf('./data/data_raw/'+group+'_4f_1015_30m.hf', key='train')
+df_val = pd.read_hdf('./data/data_raw/'+group+'_4f_1015_30m.hf', key='val')
+df_test = pd.read_hdf('./data/data_raw/'+group+'_4f_1015_30m.hf', key='test')
 
 
 class Coordinator:
@@ -36,6 +36,8 @@ class Coordinator:
         if talib == True:
             feature_num += 2
         trading_cost = config['env']['trading_cost']
+        trade_period = config['env']['trading_period']
+
 
         # net config
         network_config = config['net']
@@ -82,6 +84,7 @@ class Coordinator:
                                  steps=1000,
                                  trading_cost=trading_cost,
                                  window_length=window_length,
+                                 trade_period=trade_period,
                                  talib=talib,
                                  input=input,
                                  norm=norm,
@@ -91,6 +94,7 @@ class Coordinator:
                                steps=1000,
                                trading_cost=trading_cost,
                                window_length=window_length,
+                               trade_period=trade_period,
                                talib=talib,
                                input=input,
                                norm=norm,
@@ -131,9 +135,10 @@ class Coordinator:
             observation = self.env_train.reset()
             while True:
                 action_idx, action = self.agent.choose_action(observation)
-                # print('ob:', observation['history'][:, -4:, :]/1000+1)
+                # print('ob:', observation['history'][:, -4:, :])
+                # action = np.ones(5) /5
                 observation_, reward, done, info = self.env_train.step(action)
-                # print('ob_:', observation_['history'][:, -4:, :]/1000+1)
+                # print('ob_:', observation_['history'][:, -4:, :])
                 # y = 1 / ( observation_['history'][:, -2, 2] / 1000 + 1)
                 # y = np.concatenate([[1], y])  # add cash price
                 # r = np.log(np.dot(y, action))
@@ -181,9 +186,10 @@ class Coordinator:
             df = df_test
         env_test = PortfolioEnv(df,
                                steps=steps,
-                               # trading_cost=self.config['env']['trading_cost'],
-                                trading_cost=0.0,
-                               window_length=self.config['env']['window_length'],
+                               trading_cost=self.config['env']['trading_cost'],
+                                # trading_cost=0.0,
+                                trade_period=self.config['env']['trade_period'],
+                                window_length=self.config['env']['window_length'],
                                talib=self.config['env']['talib'],
                                input=self.config['env']['input'],
                                norm=self.config['env']['norm'],

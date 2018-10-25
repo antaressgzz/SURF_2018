@@ -5,6 +5,7 @@ import tensorflow as tf
 import tensorflow.contrib.layers as layers
 import os
 from model.config import network_config
+from config import abspath
 
 
 class Dqn_agent:
@@ -166,7 +167,7 @@ class Dqn_agent:
         tf.summary.scalar("max_q_value", tf.reduce_max(self.q_pred))
         tf.summary.histogram('fc_input', self.fc_input)
         self.merged = tf.summary.merge_all()
-        self.writer = tf.summary.FileWriter("logs/train/" + self.name, self.sess.graph)
+        self.writer = tf.summary.FileWriter(abspath+"logs/train/" + self.name, self.sess.graph)
         self.tensorboard = True
 
     def replay(self):
@@ -197,7 +198,7 @@ class Dqn_agent:
             self.writer.add_summary(s, global_step)
 
         if self.save and global_step % self.save_period == 0:
-            self.saver.save(self.sess, 'logs/checkpoint/' + self.name, global_step=global_step)
+            self.saver.save(self.sess, abspath+'logs/checkpoint/' + self.name, global_step=global_step)
 
         if self.epsilon > self.epsilon_min:
             self.epsilon -= (1 - self.epsilon_min) / self.epsilon_decay_period
@@ -235,7 +236,7 @@ class Dqn_agent:
         return self.memory.get_ave_reward()
 
     def restore(self, name):
-        self.saver.restore(self.sess, 'logs/checkpoint/' + name)
+        self.saver.restore(self.sess, abspath+'logs/checkpoint/' + name)
 
     def start_replay(self):
         return self.memory.start_replay()

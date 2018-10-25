@@ -50,6 +50,7 @@ param_space = {
     'window_length': hp.quniform('window_length', 50, 300, 50),
     'input': hp.choice('input', ['rf', 'price']),
     'norm': hp.choice('norm', ['latest_close', 'previous']),
+    # 'trading_period': hp.quniform('trading_period', 1, 49, 4)
 }
 
 param_space_fee = {
@@ -82,6 +83,7 @@ param_space_fee = {
     # 'window_length': hp.quniform('window_length', 50, 300, 50),
     # 'input': hp.choice('input', ['rf', 'price']),
     # 'norm': hp.choice('norm', ['latest_close', 'previous']),
+    # 'trading_period': hp.quniform('trading_period', 1, 49, 4)
 }
 
 
@@ -124,6 +126,10 @@ def construct_config(config, para):
     try:
         envc["window_length"] = int(para["window_length"])
     except:
+        pass
+    # try:
+    #     envc['trading_period']= int(para['trading_period'])
+    # except:
         pass
     try:
         envc['input'] = para['input']
