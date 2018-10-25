@@ -7,6 +7,7 @@ import os
 from model.config import network_config
 from ..util import w2c
 import tensorflow.contrib.slim as slim
+from config import abspath
 
 
 class Dqn_agent:
@@ -273,11 +274,11 @@ class Dqn_agent:
         variables = slim.get_variables_to_restore()
         variables_to_restore_frame = [v for v in variables if 'conv' in v.name or 'fc1' in v.name]
         self.restorer = tf.train.Saver(variables_to_restore_frame)
-        self.restorer.restore(self.sess, 'logs/checkpoint/' + name)
+        self.restorer.restore(self.sess, abspath+'logs/checkpoint/' + name)
         # [print(var.name) for var in variables_to_restore_frame]
 
     def restore(self, name):
-        self.saver.restore(self.sess, 'logs/checkpoint/' + name)
+        self.saver.restore(self.sess, abspath+'logs/checkpoint/' + name)
 
     def start_replay(self):
         return self.memory.start_replay()

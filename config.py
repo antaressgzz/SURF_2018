@@ -1,8 +1,10 @@
 FEE = True
-EXP_KEY = 2300
-MAX_EVALS = 1
-number_workers = 1
-mode = 'single'
+EXP_KEY = 23223
+MAX_EVALS = 3
+number_workers = 3
+name = '-5.28'
+mode = 'parallel'
+abspath = '/Users/zhangziyang/PycharmProjects/SURF_2019/'
 
 
 tuned_config = {"env": {"window_length": 200,
@@ -22,7 +24,7 @@ tuned_config = {"env": {"window_length": 200,
                "dropout": 0.4893817909286,
                ############### change these #################
                "upd_tar_prd": 1000,
-               "steps": 200000,
+               "steps": 120000,
                "save": True,
                "save_period": 40000,
                "GPU": True,
