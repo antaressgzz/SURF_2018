@@ -27,6 +27,7 @@ class Coordinator:
         feature_num = 4
 
         pprint.pprint(config)
+        print(group)
 
         # env config
         window_length = int(config['env']['window_length'])

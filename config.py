@@ -1,11 +1,13 @@
-FEE = False
+FEE = True
 EXP_KEY = 23225
-MAX_EVALS = 3
-number_workers = 3
-mode = 'single'
-asset_group = 3
-name = '-5.28_ag'+str(asset_group)
+MAX_EVALS = 5
+number_workers = 2
+mode = 'parallel'
+asset_group = 0
+# name = '-5.28_ag'+str(asset_group)
+name = '-5.28'
 abspath = '/Users/zhangziyang/PycharmProjects/SURF_2019/'
+# abspath = '/home/ubuntu/documents/SURF_2018/'
 set_group = ['JPYGBPEURCAD', 'JPYCHFGBPCAD', 'CHFGBPCADEUR', 'JPYCHFCADEUR', 'JPYCHFGBPEUR']
 group = set_group[asset_group]
 
@@ -16,7 +18,7 @@ tuned_config = {"env": {"window_length": 200,
                          "talib": False,
                          "trading_period": 1,
                          ################## change this ###############
-                         "trading_cost": 0.0},
+                         "trading_cost": 0.00001},
                          ############### change these #################
      "train": {"learning_rate": 0.00015309751147495794,
                "division": 6,
@@ -28,11 +30,11 @@ tuned_config = {"env": {"window_length": 200,
                "dropout": 0.4893817909286,
                ############### change these #################
                "upd_tar_prd": 1000,
-               "steps": 200000,
-               "save": True,
+               "steps": 120000,
+               "save": False,
                "save_period": 40000,
                "GPU": False,
-               "discount": 0.0},
+               "discount": 0.9},
                 ############### change these #################
      "net": {"kernels": [[1, 10], [4, 4]],
              "strides": [[1, 1], [1, 3]],
