@@ -26,7 +26,7 @@ def qloguniform(name, low, high, q):
 # Search space
 param_space = {
     # train
-    'steps': hp.quniform("steps", 120000, 240000, 40000),
+    'steps': hp.quniform("steps", 60000, 180000, 30000),
     'learning_rate': loguniform('learning_rate', 1e-5, 1e-3),
     'batch_size': hp.choice('batch_size', [16, 32, 64, 128]),
     'replay_period': hp.choice('replay_period', [2, 4, 8, 16]),
@@ -36,7 +36,7 @@ param_space = {
     #net
     'cnn_activation': hp.choice('cnn_activation', ['selu', 'relu', 'leaky_relu']),
     'fc_activation': hp.choice('fc_activation', ['selu', 'relu', 'leaky_relu']),
-    'fc_size': hp.choice('fc_size', [32, 64, 128, 256]),
+    'fc1_size': hp.choice('fc1_size', [32, 64, 128, 256]),
     'kernels': hp.choice('kernels',
             [[[1, hp.quniform('k_w11', 3, 10, 1)], [4, hp.quniform('k_w12', 3, 10, 1)]],
             [[4, hp.quniform('k_w21', 3, 10, 1)], [1, hp.quniform('k_w22', 3, 10, 1)]],
@@ -50,7 +50,7 @@ param_space = {
     'window_length': hp.quniform('window_length', 50, 300, 50),
     'input': hp.choice('input', ['rf', 'price']),
     'norm': hp.choice('norm', ['latest_close', 'previous']),
-    # 'trading_period': hp.quniform('trading_period', 1, 49, 4)
+    'trading_period': hp.choice('trading_period', [1, 2, 4, 8, 16, 32, 64])
 }
 
 param_space_fee = {
@@ -127,9 +127,9 @@ def construct_config(config, para):
         envc["window_length"] = int(para["window_length"])
     except:
         pass
-    # try:
-    #     envc['trading_period']= int(para['trading_period'])
-    # except:
+    try:
+        envc['trading_period']= int(para['trading_period'])
+    except:
         pass
     try:
         envc['input'] = para['input']
@@ -173,7 +173,7 @@ def construct_config(config, para):
         trainc['discount'] = para['discount']
         trainc["upd_tar_prd"] = int(para["upd_tar_prd"])
     else:
-        netc['fc_size'] = para['fc_size']
+        netc['fc1_size'] = para['fc1_size']
     return config
 
 
@@ -185,10 +185,13 @@ def train_one(tuning_params):
     else:
         config = get_config(FEE)
     config = construct_config(config, tuning_params)
-    coo = Coordinator(config, [name, ''])
-    coo.restore_price_predictor('-5.28-80000-')
+    ################### To Do ################
+    # coo = Coordinator(config, [name, ''])
+    # coo.restore_price_predictor('-5.28-80000-')
+    coo = Coordinator(config, 'search')
+    ##########################################
     val_rewards, tr_rs = coo.evaluate()
-    loss = -1 * np.mean(np.sort(val_rewards[5:])[-6:-1]) * 1e6
+    loss = -1 * np.mean(val_rewards[-5:]) * 1e6
     eval_time = time.time() - start
     log_training(config, val_rewards, tr_rs, loss, eval_time)
     result = {

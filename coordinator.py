@@ -43,7 +43,6 @@ class Coordinator:
         # net config
         network_config = config['net']
 
-
         # training config
         self.total_training_step = config['train']['steps']
         self.replay_period = config['train']['replay_period']
@@ -82,24 +81,24 @@ class Coordinator:
                               GPU=GPU)
 
         self.env_train = PortfolioEnv(df_train,
-                                 steps=1000,
-                                 trading_cost=trading_cost,
-                                 window_length=window_length,
-                                 trade_period=trade_period,
-                                 talib=talib,
-                                 input=input,
-                                 norm=norm,
-                                 random_reset=True)
+                                     steps=int(2000/trade_period),
+                                     trading_cost=trading_cost,
+                                     window_length=window_length,
+                                     trade_period=trade_period,
+                                     talib=talib,
+                                     input=input,
+                                     norm=norm,
+                                     random_reset=True)
 
         self.env_val = PortfolioEnv(df_val,
-                               steps=1000,
-                               trading_cost=trading_cost,
-                               window_length=window_length,
-                               trade_period=trade_period,
-                               talib=talib,
-                               input=input,
-                               norm=norm,
-                               random_reset=False)
+                                   steps=int((len(df_val)-1000)/trade_period),
+                                   trading_cost=trading_cost,
+                                   window_length=window_length,
+                                   trade_period=trade_period,
+                                   talib=talib,
+                                   input=input,
+                                   norm=norm,
+                                   random_reset=False)
 
     def evaluate(self):
         val_rs, tr_rs = self.train()
@@ -189,7 +188,7 @@ class Coordinator:
                                steps=steps,
                                trading_cost=self.config['env']['trading_cost'],
                                 # trading_cost=0.0,
-                                trade_period=self.config['env']['trade_period'],
+                                trade_period=self.config['env']['trading_period'],
                                 window_length=self.config['env']['window_length'],
                                talib=self.config['env']['talib'],
                                input=self.config['env']['input'],
@@ -218,7 +217,7 @@ class Coordinator:
         print('ave rewards:', rewards / steps)
         df_info = env_test.return_df()
         df_olps = env_test.OLPS_data()
-        olps = OLPS(df_olps=df_olps, df_info=df_info, algo="BAH,BestSoFar")
+        olps = OLPS(df_olps=df_olps, df_info=df_info, algo="BAH,OLMAR")
         olps.plot()
         env_test.render('usual')
         sharp, maxDD = env_test.return_SD()
