@@ -12,7 +12,7 @@ from config import get_config, tuned_config
 from math import log
 import sys
 import json
-from config import FEE, EXP_KEY, MAX_EVALS, name, abspath
+from config import FEE, EXP_KEY, MAX_EVALS
 
 losses = []
 f = open('./logs/' + str(EXP_KEY) + '.json', 'a')

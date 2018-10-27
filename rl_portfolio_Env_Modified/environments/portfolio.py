@@ -153,6 +153,8 @@ class DataSrc(object):
 
         self.times = self._times[self.idx -
                                  self.window_length-1:self.idx+self.steps*self.trade_period+1]
+        # print('time', self.times.shape)
+        # print('_time', self._times.shape)
         # # augment data to prevent overfitting
         # for i in range(len(self.asset_names)):
         #     for j in range(len(self.price_columns)):
@@ -389,6 +391,11 @@ class PortfolioEnv(gym.Env):
         info['market_value'] = np.cumprod(
             [inf["market_return"] for inf in self.infos + [info]])[-1]
         # add dates
+
+        # print('steps', self.src.steps)
+        # print('step', self.src.step)
+        # print('len', len(self.src.times))
+
         info['date'] = self.src.times[self.src.step*self.src.trade_period+self.src.window_length+1].timestamp()
         info['steps'] = self.src.step
 
