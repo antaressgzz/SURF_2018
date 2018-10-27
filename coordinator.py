@@ -117,19 +117,15 @@ class Coordinator:
         val_rs = []
 
         def get_val_reward():
-            val_rewards = []
-            for i in range(23):
-                ob = self.env_val.reset()
-                while True:
-                    action_idx, action = self.agent.choose_action(ob, test=True)
-                    ob, reward, done, _ = self.env_val.step(action)
-                    val_rewards.append(reward)
-                    if done:
-                        # print(env_val.src.idx)
-                        break
-
-            mean = np.mean(val_rewards)
-            return mean
+            val_rewards = 0
+            ob = self.env_val.reset()
+            while True:
+                action_idx, action = self.agent.choose_action(ob, test=True)
+                ob, reward, done, _ = self.env_val.step(action)
+                val_rewards += reward
+                if done:
+                    break
+            return val_rewards
 
         while training_step < self.total_training_step:
             observation = self.env_train.reset()

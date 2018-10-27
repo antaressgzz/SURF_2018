@@ -1,7 +1,7 @@
 FEE = False
-EXP_KEY = 123
-MAX_EVALS = 5
-number_workers = 3
+EXP_KEY = 2700
+MAX_EVALS = 100
+number_workers = 12
 mode = 'parallel'
 asset_group = 0
 name = 'test_ag'+str(asset_group)
