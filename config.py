@@ -13,22 +13,25 @@ set_group = ['JPYGBPEURCAD', 'JPYCHFGBPCAD', 'CHFGBPCADEUR', 'JPYCHFCADEUR', 'JP
 group = set_group[asset_group]
 save = (mode == 'single')
 
-tuned_config = {"env": {"window_length": 200,
-                         "input": "rf",
-                         "norm": "previous",
-                         "talib": False,
-                         "trading_period": 8,
+tuned_config = {"env": {"window_length": 250,
+                        "trading_period": 16,
+                        "input": "rf",
+                        "norm": "latest_close",
+                        "talib": False,
                          ################## change this ###############
                          "trading_cost": 0.0},
                          ############### change these #################
-     "train": {"learning_rate": 0.00015309751147495794,
-               "division": 5,
-               "epsilon": 1,
-               "reward_scale": 1200.0,
-               "batch_size": 32,
-               "replay_period": 8,
-               "memory_size": 20000,
-               "dropout": 0.4893817909286,
+     "train":
+{"learning_rate": 0.00039302614162518276,
+ "division": 3,
+ "epsilon": 1,
+ "reward_scale": 1000.0,
+ "batch_size": 64,
+ "replay_period": 8,
+ "memory_size": 20000,
+ "dropout": 0.6208379818798792,
+
+
                ############### change these #################
                "upd_tar_prd": 3000,
                "steps": 200000,
@@ -37,17 +40,18 @@ tuned_config = {"env": {"window_length": 200,
                "GPU": False,
                "discount": 0.0},
                 ############### change these #################
-     "net": {"kernels": [[1, 5], [4, 5]],
-             "strides": [[1, 3], [1, 3]],
-             "filters": [6, 7],
-             "padding": "same",
-             "regularizer": 0.003781580642373421,
-             "fc1_size": 64,
-             "b_initializer": 0,
-             "w_initializer": 0.01,
-             "cnn_activation": "relu",
-             "fc_activation": "leaky_relu",
-             "output_num": 210,
+     "net":
+                    {"kernels": [[4, 9], [1, 9]],
+                     "strides": [[1, 3], [1, 2]],
+                     "filters": [8, 9],
+                     "padding": "same",
+                     "regularizer": 2.9378829160460648e-05,
+                     "b_initializer": 0,
+                     "w_initializer": 0.01,
+                     "cnn_activation": "leaky_relu",
+                     "fc_activation": "relu",
+                     "fc1_size": 128,
+                     "output_num": 35,
              #################### change this ###################
              "fc2_size": 64,
              "process_cost": True,
