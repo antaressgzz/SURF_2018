@@ -7,6 +7,7 @@ asset_group = 0
 # name = 'test_ag'+str(asset_group)
 # name = '-5.28'
 abspath = '/Users/zhangziyang/PycharmProjects/SURF_2019/'
+fix_random_seed = True
 # abspath = '/home/ubuntu/documents/SURF_2018/'
 set_group = ['JPYGBPEURCAD', 'JPYCHFGBPCAD', 'CHFGBPCADEUR', 'JPYCHFCADEUR', 'JPYCHFGBPEUR']
 group = set_group[asset_group]
@@ -16,12 +17,12 @@ tuned_config = {"env": {"window_length": 200,
                          "input": "rf",
                          "norm": "previous",
                          "talib": False,
-                         "trading_period": 32,
+                         "trading_period": 8,
                          ################## change this ###############
                          "trading_cost": 0.0},
                          ############### change these #################
      "train": {"learning_rate": 0.00015309751147495794,
-               "division": 6,
+               "division": 5,
                "epsilon": 1,
                "reward_scale": 1200.0,
                "batch_size": 32,
@@ -29,16 +30,16 @@ tuned_config = {"env": {"window_length": 200,
                "memory_size": 20000,
                "dropout": 0.4893817909286,
                ############### change these #################
-               "upd_tar_prd": 1000,
-               "steps": 120000,
+               "upd_tar_prd": 3000,
+               "steps": 200000,
                "save": save,
                "save_period": 40000,
                "GPU": False,
                "discount": 0.0},
                 ############### change these #################
-     "net": {"kernels": [[1, 10], [4, 4]],
-             "strides": [[1, 1], [1, 3]],
-             "filters": [4, 4],
+     "net": {"kernels": [[1, 5], [4, 5]],
+             "strides": [[1, 3], [1, 3]],
+             "filters": [6, 7],
              "padding": "same",
              "regularizer": 0.003781580642373421,
              "fc1_size": 64,

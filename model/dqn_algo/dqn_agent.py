@@ -5,7 +5,11 @@ import tensorflow as tf
 import tensorflow.contrib.layers as layers
 import os
 from model.config import network_config
-from config import abspath
+from config import abspath, fix_random_seed
+
+if fix_random_seed:
+    tf.set_random_seed(123)
+
 
 
 class Dqn_agent:

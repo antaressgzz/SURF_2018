@@ -7,7 +7,10 @@ import os
 from model.config import network_config
 from ..util import w2c
 import tensorflow.contrib.slim as slim
-from config import abspath
+from config import abspath, fix_random_seed
+
+if fix_random_seed:
+    tf.set_random_seed(123)
 
 
 class Dqn_agent:

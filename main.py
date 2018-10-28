@@ -4,7 +4,12 @@ current_path = os.getcwd()
 sys.path.append(current_path)
 from hypertune import start_commander, start_workers
 from coordinator import Coordinator
-from config import mode, number_workers, tuned_config
+from config import mode, number_workers, tuned_config, fix_random_seed
+import numpy as np
+
+if fix_random_seed:
+    np.random.seed(123)
+
 # %matplotlib inline
 
 if mode == 'parallel':
