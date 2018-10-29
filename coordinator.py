@@ -134,7 +134,7 @@ class Coordinator:
             observation = self.env_train.reset()
             while True:
                 action_idx, action = self.agent.choose_action(observation)
-                print('ob:', observation['history'][:, -4:, :])
+                # print('ob:', observation['history'][:, -4:, :])
                 # action = np.ones(5) /5
                 observation_, reward, done, info = self.env_train.step(action)
                 # print('ob_:', observation_['history'][:, -4:, :])
@@ -142,7 +142,7 @@ class Coordinator:
                 # y = np.concatenate([[1], y])  # add cash price
                 # r = np.log(np.dot(y, action))
                 # print('r should be:', r)
-                print('env gives:', reward)
+                # print('env gives:', reward)
                 self.rewards.append(reward)
                 reward *= self.reward_scale
                 # reward = np.clip(reward, -1, 1)
@@ -153,7 +153,7 @@ class Coordinator:
                         self.agent.replay()  # update target
                         training_step = self.agent.get_training_step()
                         if (training_step - 1) % 2000 == 0:
-                            num_r = 5000
+                            num_r = 10000
                             train_r = np.sum(self.rewards[-num_r:]) / num_r
                             self.train_rs.append(train_r)
                             val_r = get_val_reward()

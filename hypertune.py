@@ -26,11 +26,11 @@ def qloguniform(name, low, high, q):
 # Search space
 param_space = {
     # train
-    'steps': hp.quniform("steps", 10000, 60000, 5000),
+    'steps': hp.quniform("steps", 60000, 200000, 20000),
     'learning_rate': loguniform('learning_rate', 1e-5, 1e-2),
     'batch_size': hp.choice('batch_size', [8, 16, 32, 64, 128]),
     'replay_period': hp.choice('replay_period', [2, 4, 8, 16]),
-    'division': hp.choice('division', [3, 4, 5, 6, 7]),
+    'division': hp.choice('division', [3, 4, 5, 6, 7, 8]),
     'dropout': hp.uniform('dropout', 0.3, 0.8),
     'reward_scale': hp.quniform('reward_scale', 200, 1000, 200),
     'discount': hp.uniform('discount', 0, 1),
@@ -49,7 +49,7 @@ param_space = {
     'regularizer': loguniform('weight_decay', 1e-5, 1e-2),
     # 'padding': hp.choice('padding', ['same', 'valid']),
     # env
-    'window_length': hp.quniform('window_length', 20, 100, 20),
+    'window_length': hp.quniform('window_length', 40, 100, 20),
     'input': hp.choice('input', ['rf', 'price']),
     'norm': hp.choice('norm', ['latest_close', 'previous']),
     'trading_period': hp.quniform('trading_period', 1, 13, 3)
@@ -194,7 +194,7 @@ def train_one(tuning_params):
     coo = Coordinator(config, 'search')
     ##########################################
     val_rewards, tr_rs = coo.evaluate()
-    loss = -1 * np.mean(val_rewards[-int(len(val_rewards)*0.8):])
+    loss = -1 * np.mean(np.sort(val_rewards)[-int(len(val_rewards)*0.4):])
     eval_time = time.time() - start
     log_training(config, val_rewards, tr_rs, loss, eval_time)
     result = {
