@@ -26,31 +26,33 @@ def qloguniform(name, low, high, q):
 # Search space
 param_space = {
     # train
-    'steps': hp.quniform("steps", 60000, 180000, 30000),
-    'learning_rate': loguniform('learning_rate', 1e-5, 1e-3),
-    'batch_size': hp.choice('batch_size', [16, 32, 64, 128]),
+    'steps': hp.quniform("steps", 10000, 60000, 5000),
+    'learning_rate': loguniform('learning_rate', 1e-5, 1e-2),
+    'batch_size': hp.choice('batch_size', [8, 16, 32, 64, 128]),
     'replay_period': hp.choice('replay_period', [2, 4, 8, 16]),
-    'division': hp.choice('division', [3, 4, 5, 6]),
+    'division': hp.choice('division', [3, 4, 5, 6, 7]),
     'dropout': hp.uniform('dropout', 0.3, 0.8),
-    'reward_scale': hp.quniform('reward_scale', 100, 2100, 200),
+    'reward_scale': hp.quniform('reward_scale', 200, 1000, 200),
+    'discount': hp.uniform('discount', 0, 1),
+    'upd_tar_prd': hp.quniform("upd_tar_prd", 100, 600, 100),
     #net
     'cnn_activation': hp.choice('cnn_activation', ['selu', 'relu', 'leaky_relu']),
     'fc_activation': hp.choice('fc_activation', ['selu', 'relu', 'leaky_relu']),
     'fc1_size': hp.choice('fc1_size', [32, 64, 128, 256]),
     'kernels': hp.choice('kernels',
-            [[[1, hp.quniform('k_w11', 3, 10, 1)], [4, hp.quniform('k_w12', 3, 10, 1)]],
-            [[4, hp.quniform('k_w21', 3, 10, 1)], [1, hp.quniform('k_w22', 3, 10, 1)]],
-            [[1, hp.quniform('k_w31', 3, 10, 1)], [1, hp.quniform('k_w32', 3, 10, 1)]]]),
+            [[[1, hp.quniform('k_w11', 3, 5, 1)], [4, hp.quniform('k_w12', 3, 5, 1)]],
+            [[4, hp.quniform('k_w21', 3, 5, 1)], [1, hp.quniform('k_w22', 3, 5, 1)]],
+            [[1, hp.quniform('k_w31', 3, 5, 1)], [1, hp.quniform('k_w32', 3, 5, 1)]]]),
     'filters': [hp.quniform('filter1', 2, 10, 1), hp.quniform('filter2', 2, 10, 1)],
     'strides': [[1, hp.quniform('strides1', 1, 3, 1)],
                [1, hp.quniform('strides2', 1, 3, 1)]],
     'regularizer': loguniform('weight_decay', 1e-5, 1e-2),
     # 'padding': hp.choice('padding', ['same', 'valid']),
     # env
-    'window_length': hp.quniform('window_length', 50, 300, 50),
+    'window_length': hp.quniform('window_length', 20, 100, 20),
     'input': hp.choice('input', ['rf', 'price']),
     'norm': hp.choice('norm', ['latest_close', 'previous']),
-    'trading_period': hp.choice('trading_period', [1, 2, 4, 8, 16, 32, 64])
+    'trading_period': hp.quniform('trading_period', 1, 13, 3)
 }
 
 param_space_fee = {
@@ -174,6 +176,7 @@ def construct_config(config, para):
         trainc["upd_tar_prd"] = int(para["upd_tar_prd"])
     else:
         netc['fc1_size'] = para['fc1_size']
+        trainc['discount'] = para['discount']
     return config
 
 
@@ -191,7 +194,7 @@ def train_one(tuning_params):
     coo = Coordinator(config, 'search')
     ##########################################
     val_rewards, tr_rs = coo.evaluate()
-    loss = -1 * np.mean(val_rewards[-5:]) * 1e6
+    loss = -1 * np.mean(val_rewards[-int(len(val_rewards)*0.8):])
     eval_time = time.time() - start
     log_training(config, val_rewards, tr_rs, loss, eval_time)
     result = {

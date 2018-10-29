@@ -17,6 +17,7 @@ from ..callbacks.notebook_plot import LivePlotNotebook
 
 logger = logging.getLogger(__name__)
 
+
 class DataSrc(object):
     """Acts as data provider for each new episode."""
 
@@ -61,7 +62,10 @@ class DataSrc(object):
         # print('features:', self.features)
         data = df.as_matrix().reshape(
             (len(df), len(self.asset_names), len(self.features)))
-        self.price_columns = self.features[:3]
+        if self.features[3] not in ['high', 'low', 'close', 'open']:
+            self.price_columns = self.features[:3]
+        else:
+            self.price_columns = self.features[:4]
         # print(self.price_columns)
         self.nb_pc = len(self.price_columns)
         self.close_pos = self.price_columns.index('close')
@@ -71,8 +75,8 @@ class DataSrc(object):
         self.mean = self._data.mean(1)
         self.std = self._data.std(1)
 
-        if len(self.features) == 4:
-            self.vol_pos = 3
+        if 'volume' in self.features:
+            self.vol_pos = self.features.index('volume')
             self._data[:, :, self.vol_pos] -= self.mean[:, np.newaxis, self.vol_pos]
             self._data[:, :, self.vol_pos] /= self.mean[:, np.newaxis, self.vol_pos]
 
@@ -109,7 +113,7 @@ class DataSrc(object):
             data_window[:, :, :self.nb_pc] /= last_close_price[:, np.newaxis, np.newaxis]
             if self.input == 'rf':
                 data_window -= 1
-                data_window *= 1000
+                data_window *= 200
 
         elif self.norm == 'previous':
             _data_window = self.data[:,
@@ -118,7 +122,7 @@ class DataSrc(object):
             data_window[:, :, :self.nb_pc] /= _data_window
             if self.input == 'rf':
                 data_window -= 1
-                data_window *= 1000
+                data_window *= 200
 
         elif self.norm == None:
             pass

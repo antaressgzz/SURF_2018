@@ -1,57 +1,58 @@
 FEE = False
-EXP_KEY = 2700
-MAX_EVALS = 100
-number_workers = 12
+EXP_KEY = 2800
+MAX_EVALS = 300
+number_workers = 6
 mode = 'single'
 asset_group = 0
 # name = 'test_ag'+str(asset_group)
 # name = '-5.28'
 abspath = '/Users/zhangziyang/PycharmProjects/SURF_2019/'
-fix_random_seed = True
+fix_random_seed = False
 # abspath = '/home/ubuntu/documents/SURF_2018/'
 set_group = ['JPYGBPEURCAD', 'JPYCHFGBPCAD', 'CHFGBPCADEUR', 'JPYCHFCADEUR', 'JPYCHFGBPEUR']
 group = set_group[asset_group]
 save = (mode == 'single')
 
-tuned_config = {"env": {"window_length": 250,
-                        "trading_period": 16,
+
+
+tuned_config = {"env": {"window_length": 20,
                         "input": "rf",
-                        "norm": "latest_close",
+                        "norm": 'previous',
                         "talib": False,
                          ################## change this ###############
-                         "trading_cost": 0.0},
+                         "trading_cost": 0.0,
+                         "trading_period": 1},
                          ############### change these #################
      "train":
-{"learning_rate": 0.00039302614162518276,
- "division": 3,
+{"learning_rate": 0.00015309751147495794,
+ "division": 6,
  "epsilon": 1,
- "reward_scale": 1000.0,
- "batch_size": 64,
+ "reward_scale": 1200.0,
+ "batch_size": 32,
  "replay_period": 8,
- "memory_size": 20000,
- "dropout": 0.6208379818798792,
+ "memory_size": 10000,
+ "dropout": 0.4893817909286,
 
 
                ############### change these #################
                "upd_tar_prd": 3000,
-               "steps": 200000,
+               "steps": 10000,
                "save": save,
                "save_period": 40000,
                "GPU": False,
                "discount": 0.0},
                 ############### change these #################
      "net":
-                    {"kernels": [[4, 9], [1, 9]],
-                     "strides": [[1, 3], [1, 2]],
-                     "filters": [8, 9],
+                    {"kernels": [[1, 10], [4, 4]],
+                     "strides": [[1, 1], [1, 3]],
+                     "filters": [4, 4],
                      "padding": "same",
-                     "regularizer": 2.9378829160460648e-05,
+                     "regularizer": 0.003781580642373421,
                      "b_initializer": 0,
                      "w_initializer": 0.01,
-                     "cnn_activation": "leaky_relu",
-                     "fc_activation": "relu",
-                     "fc1_size": 128,
-                     "output_num": 35,
+                     "cnn_activation": "relu",
+                     "fc_activation": "leaky_relu",
+                     "fc1_size": 64,
              #################### change this ###################
              "fc2_size": 64,
              "process_cost": True,

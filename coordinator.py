@@ -13,18 +13,20 @@ from config import FEE, group
 if FEE : from model.dqn_algo.dqn_agent_fee import Dqn_agent
 else: from model.dqn_algo.dqn_agent import Dqn_agent
 
+# df_train = pd.read_hdf('./data/data_raw/'+group+'_4f_1015_30m.hf', key='train')
+# df_val = pd.read_hdf('./data/data_raw/'+group+'_4f_1015_30m.hf', key='val')
+# df_test = pd.read_hdf('./data/data_raw/'+group+'_4f_1015_30m.hf', key='test')
 
-
-df_train = pd.read_hdf('./data/data_raw/'+group+'_4f_1015_30m.hf', key='train')
-df_val = pd.read_hdf('./data/data_raw/'+group+'_4f_1015_30m.hf', key='val')
-df_test = pd.read_hdf('./data/data_raw/'+group+'_4f_1015_30m.hf', key='test')
+df_train = pd.read_hdf('./data/data_raw/6ASSETS_HLCO_1015_4H.hf', key='train')
+df_val = pd.read_hdf('./data/data_raw/6ASSETS_HLCO_1015_4H.hf', key='val')
+df_test = pd.read_hdf('./data/data_raw/6ASSETS_HLCO_1015_4H.hf', key='test')
 
 
 class Coordinator:
     def __init__(self, config, name):
         # fixed value
         name = name
-        asset_num = 5
+        asset_num = 7
         feature_num = 4
 
         pprint.pprint(config)
@@ -82,7 +84,7 @@ class Coordinator:
                               GPU=GPU)
 
         self.env_train = PortfolioEnv(df_train,
-                                     steps=int(2000/trade_period),
+                                     steps=int(500/trade_period),
                                      trading_cost=trading_cost,
                                      window_length=window_length,
                                      trade_period=trade_period,
@@ -92,7 +94,7 @@ class Coordinator:
                                      random_reset=True)
 
         self.env_val = PortfolioEnv(df_val,
-                                   steps=int((len(df_val)-1000)/trade_period),
+                                   steps=int((len(df_val)-100)/trade_period),
                                    trading_cost=trading_cost,
                                    window_length=window_length,
                                    trade_period=trade_period,
@@ -132,7 +134,7 @@ class Coordinator:
             observation = self.env_train.reset()
             while True:
                 action_idx, action = self.agent.choose_action(observation)
-                # print('ob:', observation['history'][:, -4:, :])
+                print('ob:', observation['history'][:, -4:, :])
                 # action = np.ones(5) /5
                 observation_, reward, done, info = self.env_train.step(action)
                 # print('ob_:', observation_['history'][:, -4:, :])
@@ -140,7 +142,7 @@ class Coordinator:
                 # y = np.concatenate([[1], y])  # add cash price
                 # r = np.log(np.dot(y, action))
                 # print('r should be:', r)
-                # print('env gives:', reward)
+                print('env gives:', reward)
                 self.rewards.append(reward)
                 reward *= self.reward_scale
                 # reward = np.clip(reward, -1, 1)
@@ -150,8 +152,8 @@ class Coordinator:
                     if self.agent.memory_cnt() % self.replay_period == 0:
                         self.agent.replay()  # update target
                         training_step = self.agent.get_training_step()
-                        if (training_step - 1) % 10000 == 0:
-                            num_r = 50000
+                        if (training_step - 1) % 2000 == 0:
+                            num_r = 5000
                             train_r = np.sum(self.rewards[-num_r:]) / num_r
                             self.train_rs.append(train_r)
                             val_r = get_val_reward()
@@ -199,6 +201,7 @@ class Coordinator:
             # print('_ob:', ob['history'][:, -2:, :])
             # action = np.random.rand(5)
             # print(action_idx, action)
+            # action = np.array([1, 0, 0, 0, 0])
             ob, reward, done, _ = env_test.step(action)
             # print('ob:', ob['history'][:, -2:, :])
             # print(reward)
