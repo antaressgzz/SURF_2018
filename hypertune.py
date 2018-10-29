@@ -52,7 +52,7 @@ param_space = {
     'window_length': hp.quniform('window_length', 40, 100, 20),
     'input': hp.choice('input', ['rf', 'price']),
     'norm': hp.choice('norm', ['latest_close', 'previous']),
-    'trading_period': hp.quniform('trading_period', 1, 13, 3)
+    'trading_period': hp.choice('trading_period', [1, 4, 7, 10, 13])
 }
 
 param_space_fee = {
