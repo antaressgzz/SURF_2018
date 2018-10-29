@@ -2,7 +2,7 @@ FEE = False
 EXP_KEY = 2900
 MAX_EVALS = 3
 number_workers = 3
-mode = 'parallel'
+mode = 'single'
 asset_group = 0
 # name = 'test_ag'+str(asset_group)
 # name = '-5.28'
@@ -13,52 +13,83 @@ set_group = ['JPYGBPEURCAD', 'JPYCHFGBPCAD', 'CHFGBPCADEUR', 'JPYCHFCADEUR', 'JP
 group = set_group[asset_group]
 save = (mode == 'single')
 
+tuned_config = {"env": {"window_length": 80,
+         "trading_period": 12,
+         "input": "rf",
+         "norm": "previous",
+         "talib": False,
+         "trading_cost": 0},
+ "train": {"learning_rate": 0.00154708530744186,
+           "division": 5,
+           "epsilon": 1,
+           "reward_scale": 800.0,
+           "batch_size": 32,
+           "steps": 100000,
+           "replay_period": 16,
+           "memory_size": 20000,
+           "upd_tar_prd": 2000,
+           "dropout": 0.3716842436216703,
+           "save": True,
+           "save_period": 20000,
+           "GPU": False,
+           "discount": 0.17630242409021413},
+ "net": {"kernels": [[1, 3], [1, 4]],
+         "strides": [[1, 2], [1, 3]],
+         "filters": [10, 8],
+         "padding": "same",
+         "regularizer": 5.622083688315497e-05,
+         "b_initializer": 0,
+         "w_initializer": 0.01,
+         "cnn_activation": "selu",
+         "fc_activation": "selu",
+         "fc1_size": 64,
+         "output_num": 462}}
 
 
-tuned_config = {"env": {"window_length": 20,
-                        "input": "rf",
-                        "norm": 'previous',
-                        "talib": False,
-                         ################## change this ###############
-                         "trading_cost": 0.0,
-                         "trading_period": 1},
-                         ############### change these #################
-     "train":
-{"learning_rate": 0.00015309751147495794,
- "division": 6,
- "epsilon": 1,
- "reward_scale": 1200.0,
- "batch_size": 32,
- "replay_period": 8,
- "memory_size": 10000,
- "dropout": 0.4893817909286,
-
-
-               ############### change these #################
-               "upd_tar_prd": 3000,
-               "steps": 10000,
-               "save": save,
-               "save_period": 40000,
-               "GPU": False,
-               "discount": 0.0},
-                ############### change these #################
-     "net":
-                    {"kernels": [[1, 10], [4, 4]],
-                     "strides": [[1, 1], [1, 3]],
-                     "filters": [4, 4],
-                     "padding": "same",
-                     "regularizer": 0.003781580642373421,
-                     "b_initializer": 0,
-                     "w_initializer": 0.01,
-                     "cnn_activation": "relu",
-                     "fc_activation": "leaky_relu",
-                     "fc1_size": 64,
-             #################### change this ###################
-             "fc2_size": 64,
-             "process_cost": True,
-             "freeze_cnn": False
-             ############### change these #################
-             }}
+# tuned_config = {"env": {"window_length": 20,
+#                         "input": "rf",
+#                         "norm": 'previous',
+#                         "talib": False,
+#                          ################## change this ###############
+#                          "trading_cost": 0.0,
+#                          "trading_period": 1},
+#                          ############### change these #################
+#      "train":
+# {"learning_rate": 0.00015309751147495794,
+#  "division": 6,
+#  "epsilon": 1,
+#  "reward_scale": 1200.0,
+#  "batch_size": 32,
+#  "replay_period": 8,
+#  "memory_size": 10000,
+#  "dropout": 0.4893817909286,
+#
+#
+#                ############### change these #################
+#                "upd_tar_prd": 3000,
+#                "steps": 10000,
+#                "save": save,
+#                "save_period": 40000,
+#                "GPU": False,
+#                "discount": 0.0},
+#                 ############### change these #################
+#      "net":
+#                     {"kernels": [[1, 10], [4, 4]],
+#                      "strides": [[1, 1], [1, 3]],
+#                      "filters": [4, 4],
+#                      "padding": "same",
+#                      "regularizer": 0.003781580642373421,
+#                      "b_initializer": 0,
+#                      "w_initializer": 0.01,
+#                      "cnn_activation": "relu",
+#                      "fc_activation": "leaky_relu",
+#                      "fc1_size": 64,
+#              #################### change this ###################
+#              "fc2_size": 64,
+#              "process_cost": True,
+#              "freeze_cnn": False
+#              ############### change these #################
+#              }}
 
 def get_config(fee):
         config = {}
@@ -81,7 +112,7 @@ def get_config(fee):
                 'batch_size': 16,
                 'steps': 100000,
                 'replay_period': 2,
-                'memory_size': 20000,
+                'memory_size': 10000,
                 'upd_tar_prd': 2000,
                 'dropout': 0.5,
                 'save': save,
@@ -114,7 +145,7 @@ def get_config(fee):
                                         'filters':[3, 3],
                                         'padding': 'same',
                                         'regularizer': 0.000697715451566933,
-                                        'fc_size': 32,
+                                        'fc1_size': 32,
                                         'b_initializer': 0,
                                         'w_initializer': 0.01,
                                         'cnn_activation': 'selu',

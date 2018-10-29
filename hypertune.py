@@ -34,7 +34,7 @@ param_space = {
     'dropout': hp.uniform('dropout', 0.3, 0.8),
     'reward_scale': hp.quniform('reward_scale', 200, 1000, 200),
     'discount': hp.uniform('discount', 0, 1),
-    'upd_tar_prd': hp.quniform("upd_tar_prd", 100, 600, 100),
+    'upd_tar_prd': hp.quniform("upd_tar_prd", 1000, 4000, 1000),
     #net
     'cnn_activation': hp.choice('cnn_activation', ['selu', 'relu', 'leaky_relu']),
     'fc_activation': hp.choice('fc_activation', ['selu', 'relu', 'leaky_relu']),
@@ -117,6 +117,10 @@ def construct_config(config, para):
     except:
         pass
     try:
+        trainc["upd_tar_prd"] = int(para["upd_tar_prd"])
+    except:
+        pass
+    try:
         trainc['dropout'] = para['dropout']
     except:
         pass
@@ -172,11 +176,8 @@ def construct_config(config, para):
     if FEE == True:
         netc['fc2_size'] = para['fc2_size']
         trainc['process_cost'] = para['process_cost']
-        trainc['discount'] = para['discount']
-        trainc["upd_tar_prd"] = int(para["upd_tar_prd"])
     else:
         netc['fc1_size'] = para['fc1_size']
-        trainc['discount'] = para['discount']
     return config
 
 
