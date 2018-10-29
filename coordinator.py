@@ -94,7 +94,7 @@ class Coordinator:
                                      random_reset=True)
 
         self.env_val = PortfolioEnv(df_val,
-                                   steps=int((len(df_val)-100)/trade_period),
+                                   steps=int((len(df_val)-150)/trade_period),
                                    trading_cost=trading_cost,
                                    window_length=window_length,
                                    trade_period=trade_period,
